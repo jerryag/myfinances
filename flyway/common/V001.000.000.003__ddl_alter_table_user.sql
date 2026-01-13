@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN change_pwd_on_login BOOLEAN NOT NULL DEFAULT TRUE;

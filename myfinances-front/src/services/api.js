@@ -1,0 +1,12 @@
+import axios from 'axios';
+
+export const api = axios.create({
+    baseURL: '/api'
+});
+
+export const userService = {
+    getAll: (params) => api.get('/users', { params }),
+    create: (data) => api.post('/users', data),
+    update: (id, data) => api.put(`/users/${id}`, data),
+    changeStatus: (id, status) => api.patch(`/users/${id}/status`, null, { params: { status } })
+};
