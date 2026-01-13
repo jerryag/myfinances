@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+import { usePageTitle } from '../context/PageTitleContext';
+import { ConfirmationModal } from '../components/ConfirmationModal';
+
 export const UserList = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState([]);
@@ -13,6 +16,28 @@ export const UserList = () => {
         BLOCKED: false,
         DELETED: false
     });
+
+    // Modal State
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalConfig, setModalConfig] = useState({
+        title: '',
+        message: '',
+        onConfirm: null
+    });
+
+    const openModal = (title, message, onConfirm) => {
+        setModalConfig({ title, message, onConfirm });
+        setModalOpen(true);
+    };
+
+    const confirmAction = () => {
+        if (modalConfig.onConfirm) {
+            modalConfig.onConfirm();
+        }
+        setModalOpen(false);
+    };
+
+    usePageTitle('Gerenciamento de Usuários');
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -47,15 +72,28 @@ export const UserList = () => {
         setPage(0); // Reset to first page on filter change
     };
 
-    const handleStatusChange = async (id, newStatus) => {
-        if (!confirm(`Deseja realmente alterar o status para ${newStatus}?`)) return;
-        try {
-            await userService.changeStatus(id, newStatus);
-            fetchUsers();
-        } catch (error) {
-            console.error('Erro ao alterar status', error);
-            alert('Erro ao alterar status');
-        }
+    const handleStatusChange = (id, newStatus) => {
+        const action = async () => {
+            try {
+                await userService.changeStatus(id, newStatus);
+                fetchUsers();
+            } catch (error) {
+                console.error('Erro ao alterar status', error);
+                alert('Erro ao alterar status');
+            }
+        };
+
+        const statusMap = {
+            'ACTIVE': 'Desbloquear',
+            'BLOCKED': 'Bloquear',
+            'DELETED': 'Excluir'
+        };
+
+        openModal(
+            'Confirmação',
+            `Deseja realmente ${statusMap[newStatus].toLowerCase()} este usuário?`,
+            action
+        );
     };
 
     const handleEdit = (user) => {
@@ -70,107 +108,158 @@ export const UserList = () => {
     };
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h2>Gerenciamento de Usuários</h2>
+        <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
 
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                <div>
-                    <strong>Filtros:</strong>
-                    <label style={{ marginLeft: '10px' }}>
-                        <input type="checkbox" checked={filters.ACTIVE} onChange={() => handleFilterChange('ACTIVE')} /> Ativos
+            <div style={{
+                marginBottom: '20px',
+                padding: '15px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                background: '#f9f9f9',
+                color: '#333' // Fix contrast
+            }}>
+                <div style={{ marginBottom: '10px', fontWeight: 'bold' }}>Filtros:</div>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={filters.ACTIVE} onChange={() => handleFilterChange('ACTIVE')} style={{ marginRight: '8px' }} /> Ativos
                     </label>
-                    <label style={{ marginLeft: '10px' }}>
-                        <input type="checkbox" checked={filters.BLOCKED} onChange={() => handleFilterChange('BLOCKED')} /> Bloqueados
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={filters.BLOCKED} onChange={() => handleFilterChange('BLOCKED')} style={{ marginRight: '8px' }} /> Bloqueados
                     </label>
-                    <label style={{ marginLeft: '10px' }}>
-                        <input type="checkbox" checked={filters.DELETED} onChange={() => handleFilterChange('DELETED')} /> Excluídos
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={filters.DELETED} onChange={() => handleFilterChange('DELETED')} style={{ marginRight: '8px' }} /> Excluídos
                     </label>
                 </div>
-                <button onClick={() => navigate('/users/new')} className="btn-primary">Novo Usuário</button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                <button
+                    onClick={() => navigate('/users/new')}
+                    className="btn-primary"
+                    style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+                >
+                    Novo Usuário
+                </button>
             </div>
 
             {loading ? <p>Carregando...</p> : (
                 <>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }} border="1">
-                        <thead>
-                            <tr>
-                                <th>Login</th>
-                                <th>Nome</th>
-                                <th>Tipo</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.map(user => (
-                                <tr key={user.id}>
-                                    <td>{user.login}</td>
-                                    <td>{user.name}</td>
-                                    <td>{
-                                        {
-                                            'ADMIN': 'Administrador',
-                                            'USER': 'Usuário',
-                                            'MASTER': 'Master'
-                                        }[user.type] || user.type
-                                    }</td>
-                                    <td>{
-                                        {
-                                            'ACTIVE': 'Ativo',
-                                            'BLOCKED': 'Bloqueado',
-                                            'DELETED': 'Deletado'
-                                        }[user.status || 'ACTIVE'] || user.status
-                                    }</td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                            {user.status !== 'DELETED' && (
-                                                <button
-                                                    onClick={() => navigate(`/users/${user.id}/edit`, { state: { user } })}
-                                                    className="btn-secondary"
-                                                    style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                                                >
-                                                    Alterar
-                                                </button>
-                                            )}
-
-                                            {user.status === 'ACTIVE' && (
-                                                <button
-                                                    onClick={() => handleStatusChange(user.id, 'BLOCKED')}
-                                                    style={{ background: '#f0ad4e', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                >
-                                                    Bloquear
-                                                </button>
-                                            )}
-
-                                            {user.status === 'BLOCKED' && (
-                                                <button
-                                                    onClick={() => handleStatusChange(user.id, 'ACTIVE')}
-                                                    style={{ background: '#5bc0de', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                >
-                                                    Desbloquear
-                                                </button>
-                                            )}
-
-                                            {user.status !== 'DELETED' && (
-                                                <button
-                                                    onClick={() => handleStatusChange(user.id, 'DELETED')}
-                                                    style={{ background: '#d9534f', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                >
-                                                    Excluir
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
+                    <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: '4px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead style={{ background: '#f5f5f5', color: '#333' }}>
+                                <tr>
+                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Login</th>
+                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Nome</th>
+                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Tipo</th>
+                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Status</th>
+                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div style={{ marginTop: '20px' }}>
-                        <button disabled={page === 0} onClick={() => setPage(page - 1)}>Anterior</button>
-                        <span style={{ margin: '0 10px' }}>Página {page + 1} de {totalPages}</span>
-                        <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Próxima</button>
+                            </thead>
+                            <tbody>
+                                {users.map(user => (
+                                    <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
+                                        <td style={{ padding: '10px 15px' }}>{user.login}</td>
+                                        <td style={{ padding: '10px 15px' }}>{user.name}</td>
+                                        <td style={{ padding: '10px 15px' }}>{
+                                            {
+                                                'ADMIN': 'Administrador',
+                                                'USER': 'Usuário',
+                                                'MASTER': 'Master'
+                                            }[user.type] || user.type
+                                        }</td>
+                                        <td style={{ padding: '10px 15px' }}>{
+                                            {
+                                                'ACTIVE': 'Ativo',
+                                                'BLOCKED': 'Bloqueado',
+                                                'DELETED': 'Deletado'
+                                            }[user.status || 'ACTIVE'] || user.status
+                                        }</td>
+                                        <td style={{ padding: '10px 15px' }}>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                {user.status !== 'DELETED' && (
+                                                    <button
+                                                        onClick={() => navigate(`/users/${user.id}/edit`, { state: { user } })}
+                                                        className="btn-secondary"
+                                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                    >
+                                                        Alterar
+                                                    </button>
+                                                )}
+
+                                                {user.status === 'ACTIVE' && (
+                                                    <button
+                                                        onClick={() => handleStatusChange(user.id, 'BLOCKED')}
+                                                        style={{ background: '#f0ad4e', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    >
+                                                        Bloquear
+                                                    </button>
+                                                )}
+
+                                                {user.status === 'BLOCKED' && (
+                                                    <button
+                                                        onClick={() => handleStatusChange(user.id, 'ACTIVE')}
+                                                        style={{ background: '#5bc0de', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    >
+                                                        Desbloquear
+                                                    </button>
+                                                )}
+
+                                                {user.status !== 'DELETED' && (
+                                                    <button
+                                                        onClick={() => handleStatusChange(user.id, 'DELETED')}
+                                                        style={{ background: '#d9534f', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    >
+                                                        Excluir
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                        <button
+                            disabled={page === 0}
+                            onClick={() => setPage(page - 1)}
+                            style={{
+                                padding: '8px 12px',
+                                background: page === 0 ? '#ccc' : '#007bff',
+                                color: '#333',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: page === 0 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            Anterior
+                        </button>
+                        <span style={{ display: 'flex', alignItems: 'center' }}>Página {page + 1} de {totalPages}</span>
+                        <button
+                            disabled={page >= totalPages - 1}
+                            onClick={() => setPage(page + 1)}
+                            style={{
+                                padding: '8px 12px',
+                                background: page >= totalPages - 1 ? '#ccc' : '#007bff',
+                                color: '#333',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            Próxima
+                        </button>
                     </div>
                 </>
             )}
+            {/* Render Modal */}
+            <ConfirmationModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onConfirm={confirmAction}
+                title={modalConfig.title}
+                message={modalConfig.message}
+            />
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Home } from './pages/Home';
 import { ChangePassword } from './pages/ChangePassword';
@@ -13,31 +14,31 @@ function App() {
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<Login />} />
-                    <Route path="/change-password" element={
+
+                    <Route element={
                         <ProtectedRoute>
-                            <ChangePassword />
+                            <Layout />
                         </ProtectedRoute>
-                    } />
-                    <Route path="/home" element={
-                        <ProtectedRoute>
-                            <Home />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/users" element={
-                        <ProtectedRoute roles={['ADMIN', 'MASTER']}>
-                            <UserList />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/users/new" element={
-                        <ProtectedRoute roles={['ADMIN', 'MASTER']}>
-                            <UserForm />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/users/:id/edit" element={
-                        <ProtectedRoute roles={['ADMIN', 'MASTER']}>
-                            <UserForm />
-                        </ProtectedRoute>
-                    } />
+                    }>
+                        <Route path="/home" element={<Home />} />
+                        <Route path="/change-password" element={<ChangePassword />} />
+
+                        <Route path="/users" element={
+                            <ProtectedRoute roles={['ADMIN', 'MASTER']}>
+                                <UserList />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/users/new" element={
+                            <ProtectedRoute roles={['ADMIN', 'MASTER']}>
+                                <UserForm />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/users/:id/edit" element={
+                            <ProtectedRoute roles={['ADMIN', 'MASTER']}>
+                                <UserForm />
+                            </ProtectedRoute>
+                        } />
+                    </Route>
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

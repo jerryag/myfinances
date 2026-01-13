@@ -34,12 +34,16 @@ export const Login = () => {
                     <div className="form-group">
                         <label htmlFor="login">Login</label>
                         <input
-                            type="text"
+                            type="email"
                             id="login"
+                            name="username"
                             value={loginInput}
                             onChange={(e) => setLoginInput(e.target.value)}
                             placeholder="usuario@dominio.com"
                             required
+                            autoComplete="username"
+                            onInvalid={e => e.target.setCustomValidity(e.target.validity.valueMissing ? 'Por favor, informe seu login (e-mail).' : 'Por favor, inclua um "@" no endereço de e-mail.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
                     <div className="form-group">
@@ -47,10 +51,14 @@ export const Login = () => {
                         <input
                             type="password"
                             id="password"
+                            name="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="******"
                             required
+                            autoComplete="current-password"
+                            onInvalid={e => e.target.setCustomValidity('Por favor, informe sua senha.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
                     <button type="submit" className="btn-primary">Entrar</button>

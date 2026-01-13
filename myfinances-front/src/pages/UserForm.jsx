@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { userService } from '../services/api';
+import { usePageTitle } from '../context/PageTitleContext';
 
 export const UserForm = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const location = useLocation();
     const isEdit = !!id;
+    usePageTitle(isEdit ? 'Edição de Usuário' : 'Cadastro de Usuário');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -58,10 +61,9 @@ export const UserForm = () => {
     return (
         <div className="login-container">
             <div className="login-card" style={{ maxWidth: '600px' }}>
-                <h2>{isEdit ? 'Editar Usuário' : 'Novo Usuário'}</h2>
                 {error && <div className="error-message">{error}</div>}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                     <div className="form-group">
                         <label>Nome</label>
                         <input
@@ -69,6 +71,9 @@ export const UserForm = () => {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
+                            placeholder="Informe o nome completo do usuário"
+                            onInvalid={e => e.target.setCustomValidity('Por favor, preencha o nome do usuário.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
                     <div className="form-group">
@@ -78,6 +83,10 @@ export const UserForm = () => {
                             value={formData.login}
                             onChange={(e) => setFormData({ ...formData, login: e.target.value })}
                             required
+                            placeholder="Informe o login do usuário"
+                            autoComplete="off"
+                            onInvalid={e => e.target.setCustomValidity(e.target.validity.valueMissing ? 'Por favor, informe o login (e-mail).' : 'Por favor, inclua um "@" no endereço de e-mail.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
                     <div className="form-group">
@@ -92,12 +101,16 @@ export const UserForm = () => {
                         </select>
                     </div>
                     <div className="form-group">
-                        <label>{isEdit ? 'Nova Senha (Opcional)' : 'Senha Provisória (Opcional)'}</label>
+                        <label>{isEdit ? 'Nova Senha (Opcional)' : 'Senha Provisória'}</label>
                         <input
                             type="password"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            placeholder={isEdit ? "Deixe em branco para manter a atual" : "Padrão: MyFinances@123"}
+                            placeholder={isEdit ? "Deixe em branco para manter a atual" : "Informe a senha provisória"}
+                            required={!isEdit}
+                            autoComplete="new-password"
+                            onInvalid={e => e.target.setCustomValidity('Por favor, informe a senha provisória.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
 

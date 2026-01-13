@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
         params.append('oldPassword', oldPassword);
         params.append('newPassword', newPassword);
 
-        await api.post('/change-password', params);
+        await api.post('/users/change-password', params);
     };
 
     return (

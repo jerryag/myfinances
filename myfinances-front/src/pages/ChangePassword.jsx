@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../context/PageTitleContext';
 
 export const ChangePassword = () => {
     const { user, changePassword, logout } = useAuth();
     const navigate = useNavigate();
+    usePageTitle('Alteração de Senha');
 
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -95,6 +97,8 @@ export const ChangePassword = () => {
                             value={oldPassword}
                             onChange={(e) => setOldPassword(e.target.value)}
                             required
+                            onInvalid={e => e.target.setCustomValidity('Por favor, informe sua senha atual.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
                     <div className="form-group">
@@ -104,6 +108,8 @@ export const ChangePassword = () => {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             required
+                            onInvalid={e => e.target.setCustomValidity('Por favor, informe a nova senha.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
 
@@ -135,11 +141,13 @@ export const ChangePassword = () => {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
+                            onInvalid={e => e.target.setCustomValidity('Por favor, confirme a nova senha.')}
+                            onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <button type="submit" className="btn-primary" disabled={!Object.values(validations).every(Boolean)}>
+                        <button type="submit" className="btn-primary">
                             Alterar Senha
                         </button>
                         <button type="button" onClick={handleLogout} className="btn-secondary" style={{ background: '#ccc', border: 'none', padding: '0.75rem', borderRadius: '4px', cursor: 'pointer' }}>

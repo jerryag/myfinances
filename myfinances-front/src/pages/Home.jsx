@@ -1,31 +1,22 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../context/PageTitleContext';
 
 export const Home = () => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
-
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
+    usePageTitle('Home');
 
     return (
         <div className="home-container">
-            <header className="home-header">
-                <h1>Bem-vindo, {user?.name}</h1>
-                <button onClick={handleLogout} className="btn-logout">Sair</button>
-            </header>
-
             <main className="dashboard-grid">
-                <div className="home-content" style={{ gridColumn: '1 / -1', marginBottom: '20px' }}>
-                    <p>Bem-vindo, {user.name}!</p>
-                    {['ADMIN', 'MASTER'].includes(user.type) && (
-                        <button onClick={() => navigate('/users')} className="btn-primary" style={{ marginTop: '10px' }}>
-                            Gerenciar Usuários
-                        </button>
-                    )}
-                </div>
+                {['ADMIN', 'MASTER'].includes(user.type) && (
+                    <div className="card">
+                        <h3>Usuários</h3>
+                        <p>Gerencie usuários e acessos.</p>
+                        <button onClick={() => navigate('/users')} className="btn-card">Acessar</button>
+                    </div>
+                )}
 
                 <div className="card">
                     <h3>Lançamentos</h3>
