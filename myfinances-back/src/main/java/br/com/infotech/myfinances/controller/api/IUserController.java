@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@Tag(name = "Users", description = "Gerenciamento de Usuários")
+@Tag(name = "Usuários", description = "Gerenciamento de Usuários")
 public interface IUserController {
 
         @Operation(summary = "Altera a senha do usuário", description = "Altera a senha do usuário mediante validação da senha atual.")

@@ -97,6 +97,7 @@ export const ChangePassword = () => {
                             value={oldPassword}
                             onChange={(e) => setOldPassword(e.target.value)}
                             required
+                            placeholder="Informe sua senha atual"
                             onInvalid={e => e.target.setCustomValidity('Por favor, informe sua senha atual.')}
                             onInput={e => e.target.setCustomValidity('')}
                         />
@@ -108,6 +109,7 @@ export const ChangePassword = () => {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             required
+                            placeholder="Informe a nova senha"
                             onInvalid={e => e.target.setCustomValidity('Por favor, informe a nova senha.')}
                             onInput={e => e.target.setCustomValidity('')}
                         />
@@ -141,6 +143,7 @@ export const ChangePassword = () => {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
+                            placeholder="Confirme a nova senha"
                             onInvalid={e => e.target.setCustomValidity('Por favor, confirme a nova senha.')}
                             onInput={e => e.target.setCustomValidity('')}
                         />

@@ -15,12 +15,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class UserService {
 
     private static final String INVALID_CREDENTIALS_MSG = "Usuário ou senha inválidos";
@@ -39,6 +41,7 @@ public class UserService {
      * @throws IllegalArgumentException se o login for nulo ou vazio.
      */
     public Optional<User> findByLogin(String login) {
+        log.debug("Finding user by login: {}", login);
         if (StringUtils.isBlank(login)) {
             throw new IllegalArgumentException("Login obrigatório");
         }
@@ -57,6 +60,7 @@ public class UserService {
      * @throws BlockedUserException     se o usuário estiver com status BLOCKED.
      */
     public UserDto login(String login, String password) {
+        log.debug("Attempting login for user: {}", login);
         if (StringUtils.isBlank(login) || StringUtils.isBlank(password)) {
             throw new IllegalArgumentException("Login e senha obrigatórios");
         }
@@ -133,6 +137,7 @@ public class UserService {
 
     public Page<UserDto> findAll(List<UserStatus> statuses,
             Pageable pageable) {
+        log.debug("Finding all users with statuses: {}", statuses);
         Specification<User> spec = (root, query, cb) -> {
             if (statuses != null && !statuses.isEmpty()) {
                 return cb.and(root.get("status").in(statuses),
@@ -153,6 +158,7 @@ public class UserService {
 
     @Transactional
     public UserDto create(UserDto userDto) {
+        log.debug("Creating user: {}", userDto.getLogin());
         if (StringUtils.isBlank(userDto.getLogin()) || StringUtils.isBlank(userDto.getName())
                 || StringUtils.isBlank(userDto.getType())) {
             throw new IllegalArgumentException("Dados obrigatórios não preenchidos");
@@ -193,6 +199,7 @@ public class UserService {
 
     @Transactional
     public UserDto update(Long id, UserDto userDto) {
+        log.debug("Updating user with ID: {}", id);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
@@ -234,5 +241,13 @@ public class UserService {
 
         user.setStatus(status);
         userRepository.save(user);
+    }
+
+    public User getCurrentUser() {
+        User user = br.com.infotech.myfinances.context.UserContext.getCurrentUser();
+        if (user == null) {
+            throw new RuntimeException("Usuário não autenticado no contexto.");
+        }
+        return user;
     }
 }

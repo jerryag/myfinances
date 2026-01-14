@@ -7,6 +7,8 @@ import { Home } from './pages/Home';
 import { ChangePassword } from './pages/ChangePassword';
 import { UserList } from './pages/UserList';
 import { UserForm } from './pages/UserForm';
+import { TransactionTypeList } from './pages/TransactionTypeList';
+import { TransactionTypeForm } from './pages/TransactionTypeForm';
 
 function App() {
     return (
@@ -22,6 +24,10 @@ function App() {
                     }>
                         <Route path="/home" element={<Home />} />
                         <Route path="/change-password" element={<ChangePassword />} />
+
+                        <Route path="/transaction-types" element={<TransactionTypeList />} />
+                        <Route path="/transaction-types/new" element={<TransactionTypeForm />} />
+                        <Route path="/transaction-types/:id/edit" element={<TransactionTypeForm />} />
 
                         <Route path="/users" element={
                             <ProtectedRoute roles={['ADMIN', 'MASTER']}>

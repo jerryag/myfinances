@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { FaEdit, FaTrash, FaLock, FaUnlock } from 'react-icons/fa';
 
 import { usePageTitle } from '../context/PageTitleContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -96,17 +97,6 @@ export const UserList = () => {
         );
     };
 
-    const handleEdit = (user) => {
-        // We will implement navigation to edit later, or use a modal.
-        // For now, let's assume a modal or a separate route.
-        // Given the prompt "create a new user... form of creation", let's use a separate route or modal.
-        // Let's use navigation to /users/edit/:id or /users/new
-        // Since I haven't created the form yet, I'll just log or alert for now.
-        // Ideally, navigate(`/users/${user.id}`);
-        // But let's build the UserForm first. For now, placeholder.
-        navigate(`/users/${user.id}`);
-    };
-
     return (
         <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
 
@@ -171,49 +161,53 @@ export const UserList = () => {
                                             {
                                                 'ACTIVE': 'Ativo',
                                                 'BLOCKED': 'Bloqueado',
-                                                'DELETED': 'Deletado'
+                                                'DELETED': 'Excluído'
                                             }[user.status || 'ACTIVE'] || user.status
                                         }</td>
                                         <td style={{ padding: '10px 15px' }}>
-                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
                                                 {user.status !== 'DELETED' && (
                                                     <button
                                                         onClick={() => navigate(`/users/${user.id}/edit`, { state: { user } })}
-                                                        className="btn-secondary"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                        title="Editar"
+                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#337ab7', fontSize: '1.1rem' }}
                                                     >
-                                                        Alterar
+                                                        <FaEdit />
                                                     </button>
                                                 )}
 
                                                 {user.status === 'ACTIVE' && (
                                                     <button
                                                         onClick={() => handleStatusChange(user.id, 'BLOCKED')}
-                                                        style={{ background: '#f0ad4e', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                        title="Bloquear"
+                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#f0ad4e', fontSize: '1.1rem' }}
                                                     >
-                                                        Bloquear
+                                                        <FaLock />
                                                     </button>
                                                 )}
 
                                                 {user.status === 'BLOCKED' && (
                                                     <button
                                                         onClick={() => handleStatusChange(user.id, 'ACTIVE')}
-                                                        style={{ background: '#5bc0de', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                        title="Desbloquear"
+                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#5bc0de', fontSize: '1.1rem' }}
                                                     >
-                                                        Desbloquear
+                                                        <FaUnlock />
                                                     </button>
                                                 )}
 
                                                 {user.status !== 'DELETED' && (
                                                     <button
                                                         onClick={() => handleStatusChange(user.id, 'DELETED')}
-                                                        style={{ background: '#d9534f', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                        title="Excluir"
+                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#d9534f', fontSize: '1.1rem' }}
                                                     >
-                                                        Excluir
+                                                        <FaTrash />
                                                     </button>
                                                 )}
                                             </div>
                                         </td>
+
                                     </tr>
                                 ))}
                             </tbody>

@@ -59,8 +59,8 @@ export const UserForm = () => {
     };
 
     return (
-        <div className="login-container">
-            <div className="login-card" style={{ maxWidth: '600px' }}>
+        <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
+            <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
                 {error && <div className="error-message">{error}</div>}
 
                 <form onSubmit={handleSubmit} autoComplete="off">
@@ -68,6 +68,7 @@ export const UserForm = () => {
                         <label>Nome</label>
                         <input
                             type="text"
+                            autoFocus
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required

@@ -19,6 +19,12 @@ export const Home = () => {
                 )}
 
                 <div className="card">
+                    <h3>Tipos de Transação</h3>
+                    <p>Cadastre tipos de receitas e despesas.</p>
+                    <button onClick={() => navigate('/transaction-types')} className="btn-card">Acessar</button>
+                </div>
+
+                <div className="card">
                     <h3>Lançamentos</h3>
                     <p>Gerencie suas receitas e despesas.</p>
                     <button className="btn-card">Acessar</button>
