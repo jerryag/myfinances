@@ -1,0 +1,14 @@
+services:
+  database:
+    image: postgres-myfinances
+    container_name: myfinances-db
+    build: .
+    ports:
+      - "5432:5432"
+    volumes:
+      - ~/volumes/postgres-data/myfinances_db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d myfinance_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

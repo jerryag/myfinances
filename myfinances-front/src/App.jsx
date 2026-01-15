@@ -9,6 +9,7 @@ import { UserList } from './pages/UserList';
 import { UserForm } from './pages/UserForm';
 import { TransactionTypeList } from './pages/TransactionTypeList';
 import { TransactionTypeForm } from './pages/TransactionTypeForm';
+import { MonthlyPlanning } from './pages/MonthlyPlanning';
 
 function App() {
     return (
@@ -25,7 +26,8 @@ function App() {
                         <Route path="/home" element={<Home />} />
                         <Route path="/change-password" element={<ChangePassword />} />
 
-                        <Route path="/transaction-types" element={<TransactionTypeList />} />
+                        <Route path="/monthly-planning" element={<ProtectedRoute><MonthlyPlanning /></ProtectedRoute>} />
+                        <Route path="/transaction-types" element={<ProtectedRoute><TransactionTypeList /></ProtectedRoute>} />
                         <Route path="/transaction-types/new" element={<TransactionTypeForm />} />
                         <Route path="/transaction-types/:id/edit" element={<TransactionTypeForm />} />
 

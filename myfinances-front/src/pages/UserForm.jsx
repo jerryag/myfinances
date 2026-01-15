@@ -65,28 +65,28 @@ export const UserForm = () => {
 
                 <form onSubmit={handleSubmit} autoComplete="off">
                     <div className="form-group">
-                        <label>Nome</label>
-                        <input
-                            type="text"
-                            autoFocus
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
-                            placeholder="Informe o nome completo do usuário"
-                            onInvalid={e => e.target.setCustomValidity('Por favor, preencha o nome do usuário.')}
-                            onInput={e => e.target.setCustomValidity('')}
-                        />
-                    </div>
-                    <div className="form-group">
                         <label>Login (E-mail)</label>
                         <input
                             type="email"
+                            autoFocus
                             value={formData.login}
                             onChange={(e) => setFormData({ ...formData, login: e.target.value })}
                             required
                             placeholder="Informe o login do usuário"
                             autoComplete="off"
                             onInvalid={e => e.target.setCustomValidity(e.target.validity.valueMissing ? 'Por favor, informe o login (e-mail).' : 'Por favor, inclua um "@" no endereço de e-mail.')}
+                            onInput={e => e.target.setCustomValidity('')}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Nome</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                            placeholder="Informe o nome completo do usuário"
+                            onInvalid={e => e.target.setCustomValidity('Por favor, preencha o nome do usuário.')}
                             onInput={e => e.target.setCustomValidity('')}
                         />
                     </div>

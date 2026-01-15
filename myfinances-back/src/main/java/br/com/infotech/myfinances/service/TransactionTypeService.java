@@ -57,6 +57,7 @@ public class TransactionTypeService {
                 .type(dto.getType())
                 .description(dto.getDescription())
                 .recurring(dto.getRecurring())
+                .defaultDay(dto.getDefaultDay())
                 .status(TransactionTypeStatus.ACTIVE)
                 .build();
 
@@ -74,6 +75,7 @@ public class TransactionTypeService {
 
         entity.setDescription(dto.getDescription());
         entity.setRecurring(dto.getRecurring());
+        entity.setDefaultDay(dto.getDefaultDay());
 
         return toDTO(transactionTypeRepository.save(entity));
     }
@@ -98,6 +100,7 @@ public class TransactionTypeService {
                 .type(entity.getType())
                 .description(entity.getDescription())
                 .recurring(entity.getRecurring())
+                .defaultDay(entity.getDefaultDay())
                 .build();
     }
 }

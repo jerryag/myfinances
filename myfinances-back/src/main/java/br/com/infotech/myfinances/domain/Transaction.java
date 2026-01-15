@@ -1,8 +1,6 @@
 package br.com.infotech.myfinances.domain;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,37 +22,41 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @NotNull
     @ManyToOne
     @JoinColumn(name = "transaction_type_id", nullable = false)
     private TransactionType transactionType;
 
-    @NotNull
+    @ManyToOne
+    @JoinColumn(name = "transaction_month_id", nullable = false)
+    private TransactionMonth transactionMonth;
+
     @Column(name = "transaction_date", nullable = false)
     private LocalDate transactionDate;
 
-    @NotBlank
-    @Column(nullable = false, length = 50)
+    @Column(nullable = true, length = 50)
     private String description;
 
-    @NotNull
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false)
     private BigDecimal amount;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
     private TransactionStatus status;
 
     @Column(length = 100)
     private String remark;
 
-    @NotNull
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

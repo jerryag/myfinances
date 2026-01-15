@@ -162,6 +162,7 @@ export function TransactionTypeList() {
                             <th style={{ padding: '10px' }}>Descrição</th>
                             <th style={{ padding: '10px' }}>Tipo</th>
                             <th style={{ padding: '10px' }}>Recorrente</th>
+                            <th style={{ padding: '10px' }}>Dia Padrão</th>
                             <th style={{ padding: '10px', width: '100px' }}>Ações</th>
                         </tr>
                     </thead>
@@ -176,6 +177,7 @@ export function TransactionTypeList() {
                                     <td style={{ padding: '10px' }}>{item.description}</td>
                                     <td style={{ padding: '10px' }}>{item.type === 'INCOME' ? 'Entrada' : 'Saída'}</td>
                                     <td style={{ padding: '10px' }}>{item.recurring ? 'Sim' : 'Não'}</td>
+                                    <td style={{ padding: '10px' }}>{item.defaultDay || '-'}</td>
                                     <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
                                         <button
                                             onClick={() => navigate(`/transaction-types/${item.id}/edit`)}

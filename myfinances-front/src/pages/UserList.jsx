@@ -13,8 +13,8 @@ export const UserList = () => {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [filters, setFilters] = useState({
-        ACTIVE: false,
-        BLOCKED: false,
+        ACTIVE: true,
+        BLOCKED: true,
         DELETED: false
     });
 

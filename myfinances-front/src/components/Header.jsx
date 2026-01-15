@@ -3,6 +3,8 @@ import { useTitle } from '../context/PageTitleContext';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import logo from '../assets/logo.png';
+
 export const Header = () => {
     const { user, logout } = useAuth();
     const title = useTitle();
@@ -31,9 +33,10 @@ export const Header = () => {
         }}>
             <div
                 onClick={() => navigate('/home')}
-                style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#333', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
             >
-                MyFinances
+                <img src={logo} alt="MyFinances Logo" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#333' }}>MyFinances</span>
             </div>
 
             <div style={{ fontSize: '1.2rem', fontWeight: '500', color: '#555' }}>

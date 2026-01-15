@@ -11,7 +11,8 @@ export function TransactionTypeForm() {
     const [formData, setFormData] = useState({
         description: '',
         type: 'INCOME', // Default
-        recurring: false
+        recurring: false,
+        defaultDay: ''
     });
     const [loading, setLoading] = useState(false);
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info', onClose: null });
@@ -124,6 +125,25 @@ export function TransactionTypeForm() {
                             />
                             <label htmlFor="recurring" style={{ marginBottom: 0 }}>Sim, é recorrente</label>
                         </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: '15px' }}>
+                        <label>Dia Padrão (Opcional)</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={formData.defaultDay || ''}
+                            onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 31)) {
+                                    setFormData({ ...formData, defaultDay: val });
+                                }
+                            }}
+                            placeholder="Dia (1-31)"
+                            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+                        />
+                        <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>Sugere este dia ao criar uma nova transação deste tipo.</small>
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

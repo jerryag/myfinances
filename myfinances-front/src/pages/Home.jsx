@@ -27,7 +27,7 @@ export const Home = () => {
                 <div className="card">
                     <h3>Lançamentos</h3>
                     <p>Gerencie suas receitas e despesas.</p>
-                    <button className="btn-card">Acessar</button>
+                    <button onClick={() => navigate('/monthly-planning')} className="btn-card">Acessar</button>
                 </div>
                 <div className="card">
                     <h3>Relatórios</h3>

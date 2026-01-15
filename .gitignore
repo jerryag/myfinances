@@ -53,7 +53,7 @@ logs/
 *.env
 
 # Docker / Local Development
-dev/
+
 docker-compose.override.yml
 
 # Brain / Agent

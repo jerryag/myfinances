@@ -1,0 +1,7 @@
+FROM postgres:16-alpine
+
+ENV POSTGRES_DB=myfinance_db
+ENV POSTGRES_USER=admin
+ENV POSTGRES_PASSWORD=admin
+
+EXPOSE 5432

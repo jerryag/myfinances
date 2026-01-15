@@ -24,4 +24,6 @@ public class TransactionTypeDto {
 
     @NotNull
     private Boolean recurring;
+
+    private Integer defaultDay;
 }

@@ -37,6 +37,11 @@ public class TransactionType {
     @NotNull
     @Column(nullable = false)
     private Boolean recurring;
+    @Column(name = "default_day")
+    @jakarta.validation.constraints.Min(1)
+    @jakarta.validation.constraints.Max(31)
+    private Integer defaultDay;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
