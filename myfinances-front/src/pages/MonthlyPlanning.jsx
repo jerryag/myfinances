@@ -14,8 +14,14 @@ export function MonthlyPlanning() {
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info' });
     const [editingRemark, setEditingRemark] = useState({ isOpen: false, transactionId: null, currentRemark: '' });
 
+    // Filters State
+    const [filters, setFilters] = useState({ day: '', types: [] });
+
     // Confirmation Modal state
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, transactionId: null });
+
+    // Track focused row for UI highlighting
+    const [focusedRowId, setFocusedRowId] = useState(null);
 
     const handleRemarkSave = async (remark) => {
         if (!editingRemark.transactionId) return;
@@ -64,18 +70,14 @@ export function MonthlyPlanning() {
         }
     };
 
-    const handleInitialBalanceChange = async (e) => {
-        const value = e.target.value;
+    const handleInitialBalanceSave = async (newValue) => {
         // Optimistic update
-        setMonthData(prev => ({ ...prev, initialBalance: value }));
-    };
+        setMonthData(prev => ({ ...prev, initialBalance: newValue }));
 
-    const handleInitialBalanceBlur = async () => {
         try {
-            await api.patch(`/transaction-months/${monthData.id}/initial-balance`, monthData.initialBalance, {
+            await api.patch(`/transaction-months/${monthData.id}/initial-balance`, newValue, {
                 headers: { 'Content-Type': 'application/json' }
             });
-            fetchMonthData(currentDate.getMonth() + 1, currentDate.getFullYear()); // Refresh for calc
         } catch (error) {
             console.error('Erro ao atualizar saldo inicial:', error);
             setMessageModal({ isOpen: true, title: 'Erro', message: 'Erro ao atualizar saldo inicial.', type: 'error' });
@@ -114,6 +116,24 @@ export function MonthlyPlanning() {
             ...prev,
             transactions: prev.transactions.map(t => t.id === id ? { ...t, [field]: value } : t)
         }));
+    };
+
+    const handleFilterChange = (e) => {
+        const { name, value, checked, type } = e.target;
+        if (type === 'checkbox') {
+            setFilters(prev => {
+                const newTypes = checked
+                    ? [...prev.types, value]
+                    : prev.types.filter(t => t !== value);
+                return { ...prev, types: newTypes };
+            });
+        } else {
+            setFilters(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleClearFilters = () => {
+        setFilters({ day: '', types: [] });
     };
 
     const handleTransactionBlur = async (transaction) => {
@@ -229,10 +249,36 @@ export function MonthlyPlanning() {
 
     const calculateTotals = () => {
         if (!monthData) return { plannedIncome: 0, plannedExpense: 0, realizedIncome: 0, realizedExpense: 0 };
+        // Totals should probably reflect ALL transactions for correct balance calculation? 
+        // OR filtered totals? Usually Balance (Saldo Inicial + Totals) refers to the real account state, so it shouldn't be filtered.
+        // But the table view is filtered.
+        // User asked for "filters". Usually filters affect the view list. 
+        // IMPORTANT: The "Finished" (Realizado) footer and Header Balance often refer to the actual month state.
+        // If I filter by "Day 5", showing a balance of only day 5 transactions might be confusing if the "Saldo Inicial" is for the whole month.
+        // I will currently filter ONLY the table list, but KEEP the totals calculation on the FULL list, unless user specified otherwise.
+        // However, if the user wants to see "How much did I spend on food?", he might expect the totals to update.
+        // Given complexity, I'll filter the VIEW list but keep Totals on ALL data for now (or maybe filtered? "Saldo" column running balance heavily depends on previous transactions...).
+        // RUNNING BALANCE logic is tricky with filters. If I filter out previous days, the running balance will be wrong if it starts from 0.
+        // It starts from `monthData.initialBalance`.
+        // If I hide Day 1, and show Day 5, should Day 5 start with Initial Balance or Initial + Day 1?
+        // Standard behavior: Filtering hides rows. Running balance usually reflects the visible rows accumulated from the *start point*?
+        // Actually, for a checkbook style app, running balance is usually tied to the order. Hiding rows breaks the continuity of the running balance column.
+        // I will just filter the `filteredTransactions` for the map, but calculating running balance...
+        // If I skip rows, the running balance of the first visible row should probably include the invisible rows previous to it?
+        // OR, simply recalculate running balance based on visible rows starting from Initial Balance.
+        // Let's implement strict visual filtering. The Running Balance column might look weird (jumps), but that's expected. 
+        // Wait, if I filter "Income", the "Saldo" column (Balance) becomes meaningless if it doesn't account for Expenses.
+        // I will apply the filter to the `map` loop.
 
+        // Let's first define derived state for rendering.
+        return calculateActualTotals(monthData.transactions);
+    };
+
+    const calculateActualTotals = (transactions) => {
+        if (!transactions) return { plannedIncome: 0, plannedExpense: 0, realizedIncome: 0, realizedExpense: 0 };
         let plannedIncome = 0, plannedExpense = 0, realizedIncome = 0, realizedExpense = 0;
 
-        monthData.transactions.forEach(t => {
+        transactions.forEach(t => {
             const type = transactionTypes.find(type => type.id === t.transactionTypeId);
             const isIncome = type?.type === 'INCOME';
 
@@ -241,14 +287,13 @@ export function MonthlyPlanning() {
             else plannedExpense += t.amount || 0;
 
             // Realized (Paid/Received)
-            if (['PAID', 'RECEIVED'].includes(t.status)) {
+            if (t.status === 'COMPLETED') {
                 if (isIncome) realizedIncome += t.amount || 0;
                 else realizedExpense += t.amount || 0;
             }
         });
-
         return { plannedIncome, plannedExpense, realizedIncome, realizedExpense };
-    };
+    }
 
     const totals = calculateTotals();
     const plannedBalance = (parseFloat(monthData?.initialBalance) || 0) + totals.plannedIncome - totals.plannedExpense;
@@ -259,10 +304,10 @@ export function MonthlyPlanning() {
 
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', maxWidth: '1200px', margin: '0 auto', padding: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', maxWidth: '1200px', margin: '0 auto', padding: '10px' }}>
 
             {/* Header: Select Month & Initial Balance */}
-            <div className="card" style={{ marginBottom: '15px', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card" style={{ marginBottom: '15px', padding: '15px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button onClick={() => changeMonth(-1)} className="btn-icon"><FaChevronLeft /></button>
                     <h2 style={{ margin: 0, textTransform: 'capitalize', width: '200px', textAlign: 'center' }}>
@@ -272,29 +317,90 @@ export function MonthlyPlanning() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label>Saldo Inicial:</label>
-                    <input
-                        type="number"
-                        value={monthData?.initialBalance || 0}
-                        onChange={handleInitialBalanceChange}
-                        onBlur={handleInitialBalanceBlur}
-                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '120px', textAlign: 'right' }}
-                    />
+                    <label>Saldo inicial de {currentDate.toLocaleDateString('pt-BR', { month: 'long' })}:</label>
+                    <div style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '120px', backgroundColor: 'white' }}>
+                        <MoneyInput
+                            value={monthData?.initialBalance || 0}
+                            onSave={handleInitialBalanceSave}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters Panel */}
+            <div style={{
+                marginBottom: '15px',
+                padding: '15px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                background: '#f9f9f9',
+                color: '#333'
+            }}>
+                <div style={{ marginBottom: '10px', fontWeight: 'bold' }}>Filtros:</div>
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '30px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label>Dia:</label>
+                        <input
+                            type="number"
+                            name="day"
+                            min="1"
+                            max="31"
+                            value={filters.day}
+                            onChange={handleFilterChange}
+                            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '60px', textAlign: 'center' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                name="types"
+                                value="INCOME"
+                                checked={filters.types.includes('INCOME')}
+                                onChange={handleFilterChange}
+                                style={{ marginRight: '8px', cursor: 'pointer', transform: 'scale(1.2)' }}
+                            /> Entrada
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                name="types"
+                                value="EXPENSE"
+                                checked={filters.types.includes('EXPENSE')}
+                                onChange={handleFilterChange}
+                                style={{ marginRight: '8px', cursor: 'pointer', transform: 'scale(1.2)' }}
+                            /> Saída
+                        </label>
+                    </div>
+                    <div style={{ marginLeft: 'auto' }}>
+                        <button
+                            onClick={handleClearFilters}
+                            style={{
+                                padding: '8px 16px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                background: 'white',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Limpar
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Spreadsheet Table */}
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', background: 'white', marginBottom: '80px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', background: 'white', marginBottom: '100px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead style={{ position: 'sticky', top: 0, background: '#f4f4f4', zIndex: 1, color: '#333' }}>
                         <tr>
-                            <th style={{ width: '200px', padding: '10px', borderBottom: '1px solid #ddd' }}>Categ.</th>
+                            <th style={{ width: '200px', padding: '10px', borderBottom: '1px solid #ddd' }}>Tipo Lançamento</th>
                             <th style={{ width: '60px', padding: '10px', borderBottom: '1px solid #ddd' }}>Dia</th>
-                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>T</th>
                             <th style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>Descrição</th>
+                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center' }}></th>
                             <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #ddd' }}>Valor</th>
                             <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #ddd' }}>Saldo</th>
-                            <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #ddd' }}>Status</th>
+                            <th style={{ width: '80px', padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>Realizado</th>
                             <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #ddd' }}>Obs</th>
                             <th style={{ width: '50px', padding: '10px', borderBottom: '1px solid #ddd' }}>#</th>
                         </tr>
@@ -302,7 +408,38 @@ export function MonthlyPlanning() {
                     <tbody>
                         {(() => {
                             let runningBalance = parseFloat(monthData?.initialBalance || 0);
-                            return monthData?.transactions.map(t => {
+
+                            // Filter transactions
+                            const filteredTransactions = monthData?.transactions.filter(t => {
+                                // Day Filter
+                                if (filters.day && t.day && parseInt(t.day) !== parseInt(filters.day)) return false;
+
+                                // Type Filter
+                                if (filters.types.length > 0) {
+                                    const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
+                                    if (typeDef) {
+                                        if (!filters.types.includes(typeDef.type)) return false;
+                                    } else {
+                                        // If no type defined yet (new empty line), maybe show it? or hide?
+                                        // Usually beneficial to show draft lines but if filtering strictly: 
+                                        // If I want to see only Expenses, and I have a line without type, I don't know if it's expense.
+                                        // But usually empty lines are at the bottom.
+                                        // Let's Keep empty lines always visible for adding? Or filter them out?
+                                        // If I select "Income", I probably don't want to see the empty line unless I'm creating one. 
+                                        // Let's assume strict filtering.
+                                        // BUT, the new line `temp-...` might not have a typeId yet.
+                                        // Actually the new line button is outside the map loop, so the "Add Line" button is always there.
+                                        // Existing draft lines (temp) might have no TypeId.
+                                        // I'll show them if no filter active, or hide if filter active and they don't match.
+                                        if (t.transactionTypeId) return false; // Has ID but not found in map? unlikely.
+                                        // If no transactionTypeId (empty draft), hide it if we are filtering by type.
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            }) || [];
+
+                            return filteredTransactions.map(t => {
                                 const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
                                 const isIncome = typeDef?.type === 'INCOME';
                                 const amount = t.amount || 0;
@@ -311,12 +448,14 @@ export function MonthlyPlanning() {
                                 else runningBalance -= amount;
 
                                 const hasRemark = t.remark && t.remark.trim().length > 0;
+                                const isFilterActive = !!filters.day || filters.types.length > 0;
 
                                 return (
-                                    <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+                                    <tr key={t.id} className={`transaction-row ${focusedRowId === t.id ? 'active' : ''}`} style={{ borderBottom: '1px solid #eee' }}>
                                         <td style={{ padding: '5px' }}>
                                             <select
                                                 value={t.transactionTypeId || ''}
+                                                onFocus={() => setFocusedRowId(t.id)}
                                                 onChange={e => {
                                                     const newTypeId = e.target.value ? parseInt(e.target.value) : '';
 
@@ -369,6 +508,7 @@ export function MonthlyPlanning() {
                                             <input
                                                 type="number"
                                                 value={t.day}
+                                                onFocus={() => setFocusedRowId(t.id)}
                                                 onChange={e => handleTransactionChange(t.id, 'day', e.target.value)}
                                                 onBlur={(e) => {
                                                     // Ensure day is valid integer before blurring/saving
@@ -391,6 +531,16 @@ export function MonthlyPlanning() {
                                                 style={{ width: '100%', border: 'none', textAlign: 'center' }}
                                             />
                                         </td>
+                                        <td style={{ padding: '5px' }}>
+                                            <input
+                                                type="text"
+                                                value={t.description}
+                                                onFocus={() => setFocusedRowId(t.id)}
+                                                onChange={e => handleTransactionChange(t.id, 'description', e.target.value)}
+                                                onBlur={() => handleTransactionBlur(t)}
+                                                style={{ width: '100%', border: 'none' }}
+                                            />
+                                        </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <span
                                                 title={isIncome ? 'Entrada (Income)' : 'Saída (Expense)'}
@@ -404,19 +554,11 @@ export function MonthlyPlanning() {
                                             </span>
                                         </td>
                                         <td style={{ padding: '5px' }}>
-                                            <input
-                                                type="text"
-                                                value={t.description}
-                                                onChange={e => handleTransactionChange(t.id, 'description', e.target.value)}
-                                                onBlur={() => handleTransactionBlur(t)}
-                                                style={{ width: '100%', border: 'none' }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: '5px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                 <div style={{ flex: 1 }}>
                                                     <MoneyInput
                                                         value={t.amount}
+                                                        onFocus={() => setFocusedRowId(t.id)}
                                                         onSave={(newAmount) => {
                                                             handleTransactionChange(t.id, 'amount', newAmount);
                                                             // Construct updated transaction safely for save
@@ -427,6 +569,7 @@ export function MonthlyPlanning() {
                                                 </div>
                                                 <button
                                                     onClick={() => handleImportLastValue(t)}
+                                                    onFocus={() => setFocusedRowId(t.id)}
                                                     className="btn-icon"
                                                     style={{
                                                         background: 'transparent',
@@ -444,29 +587,26 @@ export function MonthlyPlanning() {
                                             </div>
                                         </td>
                                         <td style={{ padding: '5px', textAlign: 'right', color: runningBalance >= 0 ? 'green' : 'red', fontSize: '14px' }}>
-                                            {runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {!isFilterActive && runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
-                                        <td style={{ padding: '5px' }}>
-                                            <select
-                                                value={t.status}
+                                        <td style={{ padding: '5px', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={t.status === 'COMPLETED'}
                                                 onChange={e => {
-                                                    handleTransactionChange(t.id, 'status', e.target.value);
-                                                    const updatedT = { ...t, status: e.target.value };
+                                                    const newStatus = e.target.checked ? 'COMPLETED' : 'PENDING';
+                                                    handleTransactionChange(t.id, 'status', newStatus);
+                                                    const updatedT = { ...t, status: newStatus };
                                                     handleTransactionBlur(updatedT);
                                                 }}
-                                                style={{
-                                                    width: '100%', border: 'none', background: 'transparent',
-                                                    color: ['PAID', 'RECEIVED'].includes(t.status) ? 'green' : 'orange'
-                                                }}
-                                            >
-                                                <option value="PENDING">Pendente</option>
-                                                <option value="PAID">Pago</option>
-                                                <option value="RECEIVED">Realizado</option>
-                                            </select>
+                                                onFocus={() => setFocusedRowId(t.id)}
+                                                style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
+                                            />
                                         </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <button
                                                 onClick={() => setEditingRemark({ isOpen: true, transactionId: t.id, currentRemark: t.remark })}
+                                                onFocus={() => setFocusedRowId(t.id)}
                                                 className="btn-icon"
                                                 style={{ color: hasRemark ? 'green' : 'black', cursor: 'pointer', border: 'none', background: 'transparent' }}
                                                 title={t.remark || "Adicionar observação"}
@@ -477,6 +617,7 @@ export function MonthlyPlanning() {
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <button
                                                 onClick={() => handleDeleteTransaction(t.id)}
+                                                onFocus={() => setFocusedRowId(t.id)}
                                                 className="btn-icon"
                                                 style={{ color: '#ccc', cursor: 'pointer' }}
                                                 onMouseEnter={e => e.target.style.color = 'red'}
@@ -489,17 +630,19 @@ export function MonthlyPlanning() {
                                 );
                             });
                         })()}
-                        <tr onClick={handleAddLine} style={{ cursor: 'pointer', background: '#fdfdfd' }}>
-                            <td colSpan="9" style={{ padding: '10px', textAlign: 'center', color: '#888', borderTop: '1px dashed #ddd' }}>
-                                <FaPlus style={{ marginRight: '5px' }} /> Adicionar Linha
-                            </td>
-                        </tr>
+                        {(!filters.day && filters.types.length === 0) && (
+                            <tr onClick={handleAddLine} style={{ cursor: 'pointer', background: '#fdfdfd' }}>
+                                <td colSpan="9" style={{ padding: '10px', textAlign: 'center', color: '#888', borderTop: '1px dashed #ddd' }}>
+                                    <FaPlus style={{ marginRight: '5px' }} /> Adicionar Lançamento
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
 
             {/* Frozen Footer */}
-            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#2c3e50', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'center', gap: '50px', boxShadow: '0 -2px 10px rgba(0,0,0,0.1)' }}>
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#2c3e50', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'center', gap: '50px', boxShadow: '0 -2px 10px rgba(0,0,0,0.1)', zIndex: 10 }}>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>PLANEJADO</div>
                     <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
@@ -552,7 +695,7 @@ const formatDecimal = (value) => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const MoneyInput = ({ value, onSave }) => {
+const MoneyInput = ({ value, onSave, onFocus }) => {
     // Initial state based on value
     const [text, setText] = useState(formatDecimal(value));
     const [isEditing, setIsEditing] = useState(false);
@@ -572,6 +715,7 @@ const MoneyInput = ({ value, onSave }) => {
     };
 
     const handleFocus = (e) => {
+        if (onFocus) onFocus(e);
         setIsEditing(true);
         e.target.select();
     };
