@@ -1,5 +1,6 @@
 package br.com.infotech.myfinances.domain;
 
+import java.math.BigDecimal;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -41,6 +42,9 @@ public class TransactionType {
     @jakarta.validation.constraints.Min(1)
     @jakarta.validation.constraints.Max(31)
     private Integer defaultDay;
+
+    @Column(name = "default_amount")
+    private BigDecimal defaultAmount;
 
     @NotNull
     @Enumerated(EnumType.STRING)

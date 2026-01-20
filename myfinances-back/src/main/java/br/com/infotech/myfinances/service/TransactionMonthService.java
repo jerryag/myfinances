@@ -194,7 +194,9 @@ public class TransactionMonthService {
                                 return -1;
                         if (!t1IsIncome && t2IsIncome)
                                 return 1;
-                        return 0;
+
+                        // Tie-breaker 3: Amount (ASC)
+                        return t1.getAmount().compareTo(t2.getAmount());
                 });
 
                 return toDto(entity, transactions);

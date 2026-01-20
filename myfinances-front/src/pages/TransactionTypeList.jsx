@@ -163,14 +163,15 @@ export function TransactionTypeList() {
                             <th style={{ padding: '10px' }}>Tipo</th>
                             <th style={{ padding: '10px' }}>Recorrente</th>
                             <th style={{ padding: '10px' }}>Dia Padrão</th>
+                            <th style={{ padding: '10px' }}>Valor Padrão</th>
                             <th style={{ padding: '10px', width: '100px' }}>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Carregando...</td></tr>
+                            <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>Carregando...</td></tr>
                         ) : transactionTypes.length === 0 ? (
-                            <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Nenhum registro encontrado.</td></tr>
+                            <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>Nenhum registro encontrado.</td></tr>
                         ) : (
                             transactionTypes.map(item => (
                                 <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
@@ -178,6 +179,11 @@ export function TransactionTypeList() {
                                     <td style={{ padding: '10px' }}>{item.type === 'INCOME' ? 'Entrada' : 'Saída'}</td>
                                     <td style={{ padding: '10px' }}>{item.recurring ? 'Sim' : 'Não'}</td>
                                     <td style={{ padding: '10px' }}>{item.defaultDay || '-'}</td>
+                                    <td style={{ padding: '10px' }}>
+                                        {item.defaultAmount && parseFloat(item.defaultAmount) > 0
+                                            ? parseFloat(item.defaultAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                            : '-'}
+                                    </td>
                                     <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
                                         <button
                                             onClick={() => navigate(`/transaction-types/${item.id}/edit`)}

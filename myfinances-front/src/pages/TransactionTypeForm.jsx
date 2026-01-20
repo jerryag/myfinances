@@ -12,7 +12,8 @@ export function TransactionTypeForm() {
         description: '',
         type: 'INCOME', // Default
         recurring: false,
-        defaultDay: ''
+        defaultDay: '',
+        defaultAmount: '',
     });
     const [loading, setLoading] = useState(false);
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info', onClose: null });
@@ -144,6 +145,22 @@ export function TransactionTypeForm() {
                             style={{ width: '100%', padding: '8px', marginTop: '5px' }}
                         />
                         <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>Sugere este dia ao criar uma nova transação deste tipo.</small>
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: '15px' }}>
+                        <label>Valor Padrão (Opcional)</label>
+                        <input
+                            type="text"
+                            value={formData.defaultAmount ? formData.defaultAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                            onChange={e => {
+                                const raw = e.target.value.replace(/\D/g, ''); // Digits only
+                                const val = raw ? parseFloat(raw) / 100 : '';
+                                setFormData({ ...formData, defaultAmount: val });
+                            }}
+                            placeholder="0,00"
+                            style={{ width: '100%', padding: '8px', marginTop: '5px', textAlign: 'right' }}
+                        />
+                        <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>Sugere este valor ao selecionar este tipo de transação (se maior que 0).</small>
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

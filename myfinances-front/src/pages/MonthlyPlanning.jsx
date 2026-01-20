@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { usePageTitle } from '../context/PageTitleContext';
-import { FaPlus, FaMinus, FaTrash, FaChevronLeft, FaChevronRight, FaRegComment, FaComment, FaHistory } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaTrash, FaChevronLeft, FaChevronRight, FaRegComment, FaComment, FaHistory, FaSync, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { MessageModal } from '../components/MessageModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
@@ -15,29 +15,92 @@ export function MonthlyPlanning() {
     const [editingRemark, setEditingRemark] = useState({ isOpen: false, transactionId: null, currentRemark: '' });
 
     // Filters State
-    const [filters, setFilters] = useState({ day: '', types: [] });
+    const [filters, setFilters] = useState({ day: '', types: [], typeText: '' });
+
+
 
     // Confirmation Modal state
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, transactionId: null });
 
     // Track focused row for UI highlighting
     const [focusedRowId, setFocusedRowId] = useState(null);
+    const focusedRowIdRef = useRef(null);
+    const pendingSortedData = useRef(null);
+    // Ref for table scrolling
+    const tableContainerRef = useRef(null);
+
+    // Derived state for filtering
+    const filteredTransactions = (() => {
+        // We can't use useMemo easily if it's not imported, and I can't update line 1 in this same steps easily without context.
+        // Actually, just calculating it in render body (before return) is fine for "derived state" in functional components,
+        // IF we don't need it in useEffect dependencies (we don't) and cost is low.
+        // BUT I need it in handlers? Handlers clearly can access state variables.
+        // BUT variables defined in render are not accessible in handlers defined outside render scope?
+        // Wait, functional components: handlers are defined inside the function body.
+        // So if I define `const filteredTransactions = ...` at the top of `MonthlyPlanning` function body,
+        // it is accessible to all handlers defined below it!
+        // Yes! No need for `useMemo` if performance isn't critical (filtering ~100 items is fast).
+        // I'll just hoist the calculation to the top of the function body.
+        if (!monthData || !monthData.transactions) return [];
+        return monthData.transactions.filter(t => {
+            // Day Filter
+            if (filters.day && t.day && parseInt(t.day) !== parseInt(filters.day)) return false;
+
+            // Type Text Filter (New)
+            if (filters.typeText) {
+                const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
+                if (!typeDef || !typeDef.description.toLowerCase().includes(filters.typeText.toLowerCase())) {
+                    return false;
+                }
+            }
+
+            // Type Filter
+            if (filters.types.length > 0) {
+                const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
+                if (typeDef) {
+                    if (!filters.types.includes(typeDef.type)) return false;
+                } else {
+                    if (t.transactionTypeId) return false;
+                    return false;
+                }
+            }
+            return true;
+        });
+    })();
 
     const handleRemarkSave = async (remark) => {
         if (!editingRemark.transactionId) return;
 
         // Optimistic update
-        const updatedTransactions = monthData.transactions.map(t =>
-            t.id === editingRemark.transactionId ? { ...t, remark: remark } : t
-        );
-        const targetTransaction = updatedTransactions.find(t => t.id === editingRemark.transactionId);
+        if (monthData && monthData.transactions) {
+            const updatedTransactions = monthData.transactions.map(t =>
+                t.id === editingRemark.transactionId ? { ...t, remark: remark } : t
+            );
+            const targetTransaction = updatedTransactions.find(t => t.id === editingRemark.transactionId);
 
-        setMonthData(prev => ({ ...prev, transactions: updatedTransactions }));
+            setMonthData(prev => ({ ...prev, transactions: updatedTransactions }));
 
-        // Save to backend
-        handleTransactionBlur(targetTransaction);
+            // Save to backend
+            if (targetTransaction) {
+                handleTransactionBlur(targetTransaction);
+            }
+        }
         setEditingRemark({ isOpen: false, transactionId: null, currentRemark: '' });
     };
+
+    useEffect(() => {
+        focusedRowIdRef.current = focusedRowId;
+
+        // If we switch focus to a different row AND we have pending sorted data, apply it now
+        if (pendingSortedData.current && focusedRowId !== pendingSortedData.current.triggerRowId) {
+            const dataToApply = pendingSortedData.current.data;
+            setMonthData(prev => {
+                if (!prev || !prev.transactions) return prev;
+                return mergeWithTemps(dataToApply, prev.transactions);
+            });
+            pendingSortedData.current = null;
+        }
+    }, [focusedRowId]);
 
     useEffect(() => {
         setTitle('Planejamento Mensal');
@@ -109,6 +172,18 @@ export function MonthlyPlanning() {
             ...prev,
             transactions: [...prev.transactions, newTransaction]
         }));
+
+        // Scroll to bottom to show new line
+        setTimeout(() => {
+            if (tableContainerRef.current) {
+                tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
+            }
+            // Focus on the first field (Type Select)
+            const element = document.getElementById(`type-select-${newTransaction.id}`);
+            if (element) {
+                element.focus();
+            }
+        }, 100);
     };
 
     const handleTransactionChange = (id, field, value) => {
@@ -133,7 +208,35 @@ export function MonthlyPlanning() {
     };
 
     const handleClearFilters = () => {
-        setFilters({ day: '', types: [] });
+        setFilters({ day: '', types: [], typeText: '' });
+    };
+
+    const handleScrollTop = () => {
+        if (!tableContainerRef.current || filteredTransactions.length === 0) return;
+        tableContainerRef.current.scrollTop = 0;
+
+        const first = filteredTransactions[0];
+        setFocusedRowId(first.id);
+
+        // Focus logic
+        setTimeout(() => {
+            const el = document.getElementById(`type-select-${first.id}`);
+            if (el) el.focus();
+        }, 50);
+    };
+
+    const handleScrollBottom = () => {
+        if (!tableContainerRef.current || filteredTransactions.length === 0) return;
+        tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
+
+        const last = filteredTransactions[filteredTransactions.length - 1];
+        setFocusedRowId(last.id);
+
+        // Focus logic
+        setTimeout(() => {
+            const el = document.getElementById(`type-select-${last.id}`);
+            if (el) el.focus();
+        }, 50);
     };
 
     const handleTransactionBlur = async (transaction) => {
@@ -149,16 +252,53 @@ export function MonthlyPlanning() {
 
             try {
                 const response = await api.post(`/transaction-months/${monthData.id}/transactions`, payload);
-                // When we get response, the new transaction is in the list with a real ID.
-                // We need to remove the temp one we just saved from our local "temps" list to avoid duplication/retention,
-                // BUT mergeWithTemps logic blindly re-adds all temps.
-                // So we need a smarter merge or just filter this specific temp ID out before merging.
 
+                // Identify the new real transaction (ID present in response but not in current real IDs)
+                // Actually, simpler: The response returns the full state. The new transaction is the one that correlates to our payload?
+                // No, we can diff the IDs.
+
+                // We need to update state IN PLACE to avoid jumping.
                 setMonthData(prev => {
-                    const remainingTemps = prev.transactions.filter(t => isTempId(t.id) && t.id !== transaction.id);
+                    // Find the new real transaction from response
+                    // It's a bit hard to match exactly if we don't have the ID.
+                    // But we know 'prev' has some real IDs. 'response' has those + 1 new one.
+                    // (Assuming no concurrent modifications by others, which is fine for now).
+
+                    const prevRealIds = new Set(prev.transactions.filter(t => !isTempId(t.id)).map(t => t.id));
+                    const newTransactionFromServer = response.data.transactions.find(t => !prevRealIds.has(t.id));
+
+                    if (!newTransactionFromServer) {
+                        // Fallback: just use response data if we can't find it (shouldn't happen)
+                        const remainingTemps = prev.transactions.filter(t => isTempId(t.id) && t.id !== transaction.id);
+                        return {
+                            ...response.data,
+                            transactions: [...response.data.transactions, ...remainingTemps]
+                        };
+                    }
+
+                    // Update focus tracker to new ID so we don't lose track
+                    focusedRowIdRef.current = newTransactionFromServer.id;
+                    setFocusedRowId(newTransactionFromServer.id);
+
+                    // Defer Sort
+                    pendingSortedData.current = {
+                        data: response.data,
+                        triggerRowId: newTransactionFromServer.id
+                    };
+
+                    // Replace temp with real in place
                     return {
-                        ...response.data,
-                        transactions: [...response.data.transactions, ...remainingTemps]
+                        ...prev, // Keep current root state (roughly)
+                        // Actually we should update root fields like balance from response, but keep transactions order
+                        initialBalance: response.data.initialBalance,
+                        id: response.data.id,
+                        month: response.data.month,
+                        year: response.data.year,
+
+                        transactions: prev.transactions.map(t => {
+                            if (t.id === transaction.id) return newTransactionFromServer;
+                            return t;
+                        })
                     };
                 });
             } catch (error) {
@@ -169,7 +309,37 @@ export function MonthlyPlanning() {
             // Update existing
             try {
                 const response = await api.put(`/transaction-months/transactions/${transaction.id}`, transaction);
-                setMonthData(prev => mergeWithTemps(response.data, prev.transactions));
+
+                // Check if user is still focused on this row via Ref (current state)
+                if (focusedRowIdRef.current === transaction.id) {
+                    // Update in-place to avoid jump
+                    setMonthData(prev => {
+                        if (!prev || !prev.transactions) return prev;
+                        const updatedBackendT = response.data.transactions.find(t => t.id === transaction.id);
+                        if (!updatedBackendT) return prev;
+
+                        const newTransactions = prev.transactions.map(t =>
+                            t.id === transaction.id ? updatedBackendT : t
+                        );
+
+                        return {
+                            ...response.data, // Keep potential root updates (balance, etc)
+                            transactions: newTransactions // But override transactions with our preserved order
+                        };
+                    });
+
+                    // Store for later sort
+                    pendingSortedData.current = {
+                        data: response.data,
+                        triggerRowId: transaction.id
+                    };
+                } else {
+                    // User moved away, safe to sort
+                    setMonthData(prev => {
+                        if (!prev || !prev.transactions) return prev;
+                        return mergeWithTemps(response.data, prev.transactions);
+                    });
+                }
             } catch (error) {
                 console.error('Erro ao atualizar transação:', error);
             }
@@ -350,6 +520,17 @@ export function MonthlyPlanning() {
                             style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '60px', textAlign: 'center' }}
                         />
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label>Tipo:</label>
+                        <input
+                            type="text"
+                            name="typeText"
+                            value={filters.typeText}
+                            onChange={handleFilterChange}
+                            placeholder="Filtrar por nome..."
+                            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '150px' }}
+                        />
+                    </div>
                     <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                         <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                             <input
@@ -390,7 +571,7 @@ export function MonthlyPlanning() {
             </div>
 
             {/* Spreadsheet Table */}
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', background: 'white', marginBottom: '100px' }}>
+            <div ref={tableContainerRef} style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', background: 'white', marginBottom: '100px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead style={{ position: 'sticky', top: 0, background: '#f4f4f4', zIndex: 1, color: '#333' }}>
                         <tr>
@@ -409,36 +590,6 @@ export function MonthlyPlanning() {
                         {(() => {
                             let runningBalance = parseFloat(monthData?.initialBalance || 0);
 
-                            // Filter transactions
-                            const filteredTransactions = monthData?.transactions.filter(t => {
-                                // Day Filter
-                                if (filters.day && t.day && parseInt(t.day) !== parseInt(filters.day)) return false;
-
-                                // Type Filter
-                                if (filters.types.length > 0) {
-                                    const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
-                                    if (typeDef) {
-                                        if (!filters.types.includes(typeDef.type)) return false;
-                                    } else {
-                                        // If no type defined yet (new empty line), maybe show it? or hide?
-                                        // Usually beneficial to show draft lines but if filtering strictly: 
-                                        // If I want to see only Expenses, and I have a line without type, I don't know if it's expense.
-                                        // But usually empty lines are at the bottom.
-                                        // Let's Keep empty lines always visible for adding? Or filter them out?
-                                        // If I select "Income", I probably don't want to see the empty line unless I'm creating one. 
-                                        // Let's assume strict filtering.
-                                        // BUT, the new line `temp-...` might not have a typeId yet.
-                                        // Actually the new line button is outside the map loop, so the "Add Line" button is always there.
-                                        // Existing draft lines (temp) might have no TypeId.
-                                        // I'll show them if no filter active, or hide if filter active and they don't match.
-                                        if (t.transactionTypeId) return false; // Has ID but not found in map? unlikely.
-                                        // If no transactionTypeId (empty draft), hide it if we are filtering by type.
-                                        return false;
-                                    }
-                                }
-                                return true;
-                            }) || [];
-
                             return filteredTransactions.map(t => {
                                 const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
                                 const isIncome = typeDef?.type === 'INCOME';
@@ -448,12 +599,13 @@ export function MonthlyPlanning() {
                                 else runningBalance -= amount;
 
                                 const hasRemark = t.remark && t.remark.trim().length > 0;
-                                const isFilterActive = !!filters.day || filters.types.length > 0;
+                                const isFilterActive = !!filters.day || filters.types.length > 0 || !!filters.typeText;
 
                                 return (
                                     <tr key={t.id} className={`transaction-row ${focusedRowId === t.id ? 'active' : ''}`} style={{ borderBottom: '1px solid #eee' }}>
                                         <td style={{ padding: '5px' }}>
                                             <select
+                                                id={`type-select-${t.id}`}
                                                 value={t.transactionTypeId || ''}
                                                 onFocus={() => setFocusedRowId(t.id)}
                                                 onChange={e => {
@@ -480,6 +632,14 @@ export function MonthlyPlanning() {
                                                             }
 
                                                             updates.day = targetDay;
+                                                        }
+
+                                                        // Auto-fill Amount Logic
+                                                        if (typeDef.defaultAmount && parseFloat(typeDef.defaultAmount) > 0) {
+                                                            const currentAmount = t.amount || 0;
+                                                            if (currentAmount === 0) {
+                                                                updates.amount = parseFloat(typeDef.defaultAmount);
+                                                            }
                                                         }
                                                     }
 
@@ -508,6 +668,8 @@ export function MonthlyPlanning() {
                                             <input
                                                 type="number"
                                                 value={t.day}
+                                                min="1"
+                                                max={new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()}
                                                 onFocus={() => setFocusedRowId(t.id)}
                                                 onChange={e => handleTransactionChange(t.id, 'day', e.target.value)}
                                                 onBlur={(e) => {
@@ -630,14 +792,87 @@ export function MonthlyPlanning() {
                                 );
                             });
                         })()}
-                        {(!filters.day && filters.types.length === 0) && (
-                            <tr onClick={handleAddLine} style={{ cursor: 'pointer', background: '#fdfdfd' }}>
-                                <td colSpan="9" style={{ padding: '10px', textAlign: 'center', color: '#888', borderTop: '1px dashed #ddd' }}>
-                                    <FaPlus style={{ marginRight: '5px' }} /> Adicionar Lançamento
-                                </td>
-                            </tr>
-                        )}
                     </tbody>
+                    <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 1, backgroundColor: '#fdfdfd', boxShadow: '0 -2px 5px rgba(0,0,0,0.05)' }}>
+                        <tr>
+                            <td colSpan="9" style={{ padding: '10px 15px', borderTop: '1px solid #ddd' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        {(!filters.day && filters.types.length === 0) && (
+                                            <button
+                                                onClick={handleAddLine}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    padding: '8px 16px',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid #ccc',
+                                                    background: '#fff',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    color: '#333'
+                                                }}
+                                            >
+                                                <FaPlus /> Adicionar Lançamento
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                        <button
+                                            onClick={handleScrollTop}
+                                            title="Ir para o topo"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '8px',
+                                                borderRadius: '4px',
+                                                border: '1px solid #ccc',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                color: '#555'
+                                            }}
+                                        >
+                                            <FaArrowUp />
+                                        </button>
+                                        <button
+                                            onClick={handleScrollBottom}
+                                            title="Ir para o fim"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '8px',
+                                                borderRadius: '4px',
+                                                border: '1px solid #ccc',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                color: '#555'
+                                            }}
+                                        >
+                                            <FaArrowDown />
+                                        </button>
+                                        <button
+                                            onClick={() => fetchMonthData(currentDate.getMonth() + 1, currentDate.getFullYear())}
+                                            title="Atualizar Tabela (Sort e Saldo)"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '8px',
+                                                borderRadius: '4px',
+                                                border: '1px solid #ccc',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                color: '#555'
+                                            }}
+                                        >
+                                            <FaSync />
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 
@@ -686,7 +921,7 @@ export function MonthlyPlanning() {
                 initialValue={editingRemark.currentRemark}
                 onSave={handleRemarkSave}
             />
-        </div>
+        </div >
     );
 }
 
