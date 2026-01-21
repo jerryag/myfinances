@@ -53,6 +53,9 @@ public class Transaction {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "icon_name", length = 50)
+    private String iconName;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

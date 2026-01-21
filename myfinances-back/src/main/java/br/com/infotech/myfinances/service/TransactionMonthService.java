@@ -112,6 +112,7 @@ public class TransactionMonthService {
                                 .amount(dto.getAmount())
                                 .status(dto.getStatus())
                                 .remark(dto.getRemark())
+                                .iconName(dto.getIconName())
                                 .build();
 
                 transactionRepository.save(transaction);
@@ -134,6 +135,7 @@ public class TransactionMonthService {
                 transaction.setAmount(dto.getAmount());
                 transaction.setStatus(dto.getStatus());
                 transaction.setRemark(dto.getRemark());
+                transaction.setIconName(dto.getIconName());
 
                 transactionRepository.save(transaction);
                 return toDto(transaction.getTransactionMonth());
@@ -213,6 +215,7 @@ public class TransactionMonthService {
                                                 .amount(t.getAmount())
                                                 .status(t.getStatus())
                                                 .remark(t.getRemark())
+                                                .iconName(t.getIconName())
                                                 .build())
                                 .collect(Collectors.toList());
 

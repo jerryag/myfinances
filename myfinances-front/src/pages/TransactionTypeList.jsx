@@ -5,6 +5,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { MessageModal } from '../components/MessageModal';
 import { FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import { usePageTitle } from '../context/PageTitleContext';
+import { getIcon } from '../utils/IconRepository';
 
 export function TransactionTypeList() {
     const navigate = useNavigate();
@@ -159,6 +160,7 @@ export function TransactionTypeList() {
                 <table width="100%" style={{ borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                            <th style={{ width: '50px', padding: '10px' }}></th>
                             <th style={{ padding: '10px' }}>Descrição</th>
                             <th style={{ padding: '10px' }}>Tipo</th>
                             <th style={{ padding: '10px' }}>Recorrente</th>
@@ -175,6 +177,12 @@ export function TransactionTypeList() {
                         ) : (
                             transactionTypes.map(item => (
                                 <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                        {(() => {
+                                            const IconComp = getIcon(item.iconName);
+                                            return IconComp ? <IconComp size={20} color="#3498db" /> : null;
+                                        })()}
+                                    </td>
                                     <td style={{ padding: '10px' }}>{item.description}</td>
                                     <td style={{ padding: '10px' }}>{item.type === 'INCOME' ? 'Entrada' : 'Saída'}</td>
                                     <td style={{ padding: '10px' }}>{item.recurring ? 'Sim' : 'Não'}</td>

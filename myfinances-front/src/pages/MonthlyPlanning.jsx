@@ -4,6 +4,8 @@ import { usePageTitle } from '../context/PageTitleContext';
 import { FaPlus, FaMinus, FaTrash, FaChevronLeft, FaChevronRight, FaRegComment, FaComment, FaHistory, FaSync, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { MessageModal } from '../components/MessageModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { getIcon } from '../utils/IconRepository';
+import { IconSelector } from '../components/IconSelector';
 
 export function MonthlyPlanning() {
     const { setTitle } = usePageTitle();
@@ -13,11 +15,10 @@ export function MonthlyPlanning() {
     const [loading, setLoading] = useState(true);
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info' });
     const [editingRemark, setEditingRemark] = useState({ isOpen: false, transactionId: null, currentRemark: '' });
+    const [editingIcon, setEditingIcon] = useState({ isOpen: false, transactionId: null, currentIcon: '' });
 
     // Filters State
     const [filters, setFilters] = useState({ day: '', types: [], typeText: '' });
-
-
 
     // Confirmation Modal state
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, transactionId: null });
@@ -86,6 +87,27 @@ export function MonthlyPlanning() {
             }
         }
         setEditingRemark({ isOpen: false, transactionId: null, currentRemark: '' });
+    };
+
+    const handleIconSave = (newIconName) => {
+        if (!editingIcon.transactionId) return;
+
+        // Optimistic update
+        if (monthData && monthData.transactions) {
+            const updatedTransactions = monthData.transactions.map(t =>
+                t.id === editingIcon.transactionId ? { ...t, iconName: newIconName } : t
+            );
+            const targetTransaction = updatedTransactions.find(t => t.id === editingIcon.transactionId);
+
+            setMonthData(prev => ({ ...prev, transactions: updatedTransactions }));
+
+            // Save to backend
+            if (targetTransaction) {
+                const updatedT = { ...targetTransaction, iconName: newIconName };
+                handleTransactionBlur(updatedT);
+            }
+        }
+        setEditingIcon({ isOpen: false, transactionId: null, currentIcon: '' });
     };
 
     useEffect(() => {
@@ -477,21 +499,22 @@ export function MonthlyPlanning() {
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', maxWidth: '1200px', margin: '0 auto', padding: '10px' }}>
 
             {/* Header: Select Month & Initial Balance */}
-            <div className="card" style={{ marginBottom: '15px', padding: '15px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card" style={{ marginBottom: '15px', padding: '15px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#2a2a2a', color: '#fff' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button onClick={() => changeMonth(-1)} className="btn-icon"><FaChevronLeft /></button>
+                    <button onClick={() => changeMonth(-1)} className="btn-icon" style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex' }}><FaChevronLeft /></button>
                     <h2 style={{ margin: 0, textTransform: 'capitalize', width: '200px', textAlign: 'center' }}>
                         {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                     </h2>
-                    <button onClick={() => changeMonth(1)} className="btn-icon"><FaChevronRight /></button>
+                    <button onClick={() => changeMonth(1)} className="btn-icon" style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex' }}><FaChevronRight /></button>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <label>Saldo inicial de {currentDate.toLocaleDateString('pt-BR', { month: 'long' })}:</label>
-                    <div style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '120px', backgroundColor: 'white' }}>
+                    <div style={{ padding: '8px', borderRadius: '4px', border: '1px solid #555', width: '120px', backgroundColor: '#333' }}>
                         <MoneyInput
                             value={monthData?.initialBalance || 0}
                             onSave={handleInitialBalanceSave}
+                            textColor="white"
                         />
                     </div>
                 </div>
@@ -571,19 +594,20 @@ export function MonthlyPlanning() {
             </div>
 
             {/* Spreadsheet Table */}
-            <div ref={tableContainerRef} style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', background: 'white', marginBottom: '100px' }}>
+            <div ref={tableContainerRef} style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', borderRadius: '8px', background: 'var(--card-bg)', marginBottom: '100px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                    <thead style={{ position: 'sticky', top: 0, background: '#f4f4f4', zIndex: 1, color: '#333' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#2a2a2a', zIndex: 1, color: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                         <tr>
-                            <th style={{ width: '200px', padding: '10px', borderBottom: '1px solid #ddd' }}>Tipo Lançamento</th>
-                            <th style={{ width: '60px', padding: '10px', borderBottom: '1px solid #ddd' }}>Dia</th>
-                            <th style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>Descrição</th>
-                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center' }}></th>
-                            <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #ddd' }}>Valor</th>
-                            <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #ddd' }}>Saldo</th>
-                            <th style={{ width: '80px', padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>Realizado</th>
-                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #ddd' }}>Obs</th>
-                            <th style={{ width: '50px', padding: '10px', borderBottom: '1px solid #ddd' }}>#</th>
+                            <th style={{ width: '200px', padding: '10px', borderBottom: '1px solid #333' }}>Tipo Lançamento</th>
+                            <th style={{ width: '60px', padding: '10px', borderBottom: '1px solid #333' }}>Dia</th>
+                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #333', textAlign: 'center' }}>Cat</th>
+                            <th style={{ padding: '10px', borderBottom: '1px solid #333' }}>Descrição</th>
+                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #333', textAlign: 'center' }}></th>
+                            <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #333' }}>Valor</th>
+                            <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #333' }}>Saldo</th>
+                            <th style={{ width: '80px', padding: '10px', borderBottom: '1px solid #333', textAlign: 'center' }}>Realizado</th>
+                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #333' }}>Obs</th>
+                            <th style={{ width: '50px', padding: '10px', borderBottom: '1px solid #333' }}>#</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -602,7 +626,7 @@ export function MonthlyPlanning() {
                                 const isFilterActive = !!filters.day || filters.types.length > 0 || !!filters.typeText;
 
                                 return (
-                                    <tr key={t.id} className={`transaction-row ${focusedRowId === t.id ? 'active' : ''}`} style={{ borderBottom: '1px solid #eee' }}>
+                                    <tr key={t.id} className={`transaction-row ${focusedRowId === t.id ? 'active' : ''}`} style={{ borderBottom: '1px solid #333' }}>
                                         <td style={{ padding: '5px' }}>
                                             <select
                                                 id={`type-select-${t.id}`}
@@ -656,11 +680,11 @@ export function MonthlyPlanning() {
                                                         handleTransactionBlur(updatedT);
                                                     }
                                                 }}
-                                                style={{ width: '100%', border: 'none', background: 'transparent' }}
+                                                style={{ width: '100%', border: 'none', background: 'transparent', color: 'var(--text-color)' }}
                                             >
-                                                <option value="" disabled>Selecione...</option>
+                                                <option value="" disabled style={{ color: '#aaa' }}>Selecione...</option>
                                                 {transactionTypes.map(type => (
-                                                    <option key={type.id} value={type.id}>{type.description}</option>
+                                                    <option key={type.id} value={type.id} style={{ color: '#000' }}>{type.description}</option>
                                                 ))}
                                             </select>
                                         </td>
@@ -690,8 +714,40 @@ export function MonthlyPlanning() {
                                                         handleTransactionBlur({ ...t, day: safeDay });
                                                     }
                                                 }}
-                                                style={{ width: '100%', border: 'none', textAlign: 'center' }}
+                                                style={{ width: '100%', border: 'none', textAlign: 'center', background: 'transparent', color: 'var(--text-color)' }}
                                             />
+                                        </td>
+                                        <td style={{ padding: '5px', textAlign: 'center' }}>
+                                            {/* Icon Override Button */}
+                                            <div
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    minWidth: '24px',
+                                                    borderRadius: '4px',
+                                                    margin: '0 auto',
+                                                    // Removed orange highlight/border as per user request to match standard list style
+                                                    background: 'transparent',
+                                                    border: '1px solid transparent'
+                                                }}
+                                                onClick={() => setEditingIcon({
+                                                    isOpen: true,
+                                                    transactionId: t.id,
+                                                    // Use transaction icon OR type icon as current
+                                                    currentIcon: t.iconName || (typeDef?.iconName || '')
+                                                })}
+                                                title={t.iconName ? `Ícone Personalizado (Padrão: ${typeDef?.description})` : `Ícone Padrão: ${typeDef?.description}`}
+                                            >
+                                                {(() => {
+                                                    const effectiveIcon = t.iconName || typeDef?.iconName;
+                                                    const IconComp = getIcon(effectiveIcon);
+                                                    return IconComp ? <IconComp size={16} color="#3498db" /> : null;
+                                                })()}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '5px' }}>
                                             <input
@@ -700,7 +756,7 @@ export function MonthlyPlanning() {
                                                 onFocus={() => setFocusedRowId(t.id)}
                                                 onChange={e => handleTransactionChange(t.id, 'description', e.target.value)}
                                                 onBlur={() => handleTransactionBlur(t)}
-                                                style={{ width: '100%', border: 'none' }}
+                                                style={{ width: '100%', border: 'none', background: 'transparent', color: 'var(--text-color)' }}
                                             />
                                         </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
@@ -727,6 +783,7 @@ export function MonthlyPlanning() {
                                                             const updatedT = { ...t, amount: newAmount };
                                                             handleTransactionBlur(updatedT);
                                                         }}
+                                                        textColor="var(--text-color)"
                                                     />
                                                 </div>
                                                 <button
@@ -770,7 +827,7 @@ export function MonthlyPlanning() {
                                                 onClick={() => setEditingRemark({ isOpen: true, transactionId: t.id, currentRemark: t.remark })}
                                                 onFocus={() => setFocusedRowId(t.id)}
                                                 className="btn-icon"
-                                                style={{ color: hasRemark ? 'green' : 'black', cursor: 'pointer', border: 'none', background: 'transparent' }}
+                                                style={{ color: hasRemark ? 'green' : '#888', cursor: 'pointer', border: 'none', background: 'transparent' }}
                                                 title={t.remark || "Adicionar observação"}
                                             >
                                                 {hasRemark ? <FaComment size={14} /> : <FaRegComment size={14} />}
@@ -780,10 +837,8 @@ export function MonthlyPlanning() {
                                             <button
                                                 onClick={() => handleDeleteTransaction(t.id)}
                                                 onFocus={() => setFocusedRowId(t.id)}
-                                                className="btn-icon"
-                                                style={{ color: '#ccc', cursor: 'pointer' }}
-                                                onMouseEnter={e => e.target.style.color = 'red'}
-                                                onMouseLeave={e => e.target.style.color = '#ccc'}
+                                                title="Excluir"
+                                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                             >
                                                 <FaTrash size={14} />
                                             </button>
@@ -793,9 +848,9 @@ export function MonthlyPlanning() {
                             });
                         })()}
                     </tbody>
-                    <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 1, backgroundColor: '#fdfdfd', boxShadow: '0 -2px 5px rgba(0,0,0,0.05)' }}>
+                    <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 1, backgroundColor: '#2a2a2a', boxShadow: '0 -2px 5px rgba(0,0,0,0.5)', color: '#fff' }}>
                         <tr>
-                            <td colSpan="9" style={{ padding: '10px 15px', borderTop: '1px solid #ddd' }}>
+                            <td colSpan="9" style={{ padding: '10px 15px', borderTop: '1px solid #333' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         {(!filters.day && filters.types.length === 0) && (
@@ -807,12 +862,12 @@ export function MonthlyPlanning() {
                                                     gap: '5px',
                                                     padding: '8px 16px',
                                                     borderRadius: '4px',
-                                                    border: '1px solid #ccc',
-                                                    background: '#fff',
+                                                    border: '1px solid #555',
+                                                    background: '#333',
                                                     cursor: 'pointer',
                                                     fontSize: '14px',
                                                     fontWeight: '500',
-                                                    color: '#333'
+                                                    color: '#fff'
                                                 }}
                                             >
                                                 <FaPlus /> Adicionar Lançamento
@@ -828,10 +883,10 @@ export function MonthlyPlanning() {
                                                 alignItems: 'center',
                                                 padding: '8px',
                                                 borderRadius: '4px',
-                                                border: '1px solid #ccc',
-                                                background: '#fff',
+                                                border: '1px solid #555',
+                                                background: '#333',
                                                 cursor: 'pointer',
-                                                color: '#555'
+                                                color: '#fff'
                                             }}
                                         >
                                             <FaArrowUp />
@@ -844,10 +899,10 @@ export function MonthlyPlanning() {
                                                 alignItems: 'center',
                                                 padding: '8px',
                                                 borderRadius: '4px',
-                                                border: '1px solid #ccc',
-                                                background: '#fff',
+                                                border: '1px solid #555',
+                                                background: '#333',
                                                 cursor: 'pointer',
-                                                color: '#555'
+                                                color: '#fff'
                                             }}
                                         >
                                             <FaArrowDown />
@@ -860,10 +915,10 @@ export function MonthlyPlanning() {
                                                 alignItems: 'center',
                                                 padding: '8px',
                                                 borderRadius: '4px',
-                                                border: '1px solid #ccc',
-                                                background: '#fff',
+                                                border: '1px solid #555',
+                                                background: '#333',
                                                 cursor: 'pointer',
-                                                color: '#555'
+                                                color: '#fff'
                                             }}
                                         >
                                             <FaSync />
@@ -915,6 +970,42 @@ export function MonthlyPlanning() {
                 cancelText="Cancelar"
             />
 
+            {/* Icon Override Modal */}
+            {editingIcon.isOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ background: 'white', padding: '15px', borderRadius: '8px', width: '350px', boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0, fontSize: '16px' }}>Selecionar Ícone</h3>
+                            {editingIcon.currentIcon && (
+                                <button
+                                    onClick={() => handleIconSave(null)} // Clear icon to revert to default
+                                    style={{ background: 'transparent', border: 'none', color: 'red', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    Restaurar Padrão
+                                </button>
+                            )}
+                        </div>
+
+                        <IconSelector
+                            selectedIcon={editingIcon.currentIcon}
+                            onSelect={(newIcon) => handleIconSave(newIcon)}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
+                            <button
+                                onClick={() => setEditingIcon({ isOpen: false, transactionId: null, currentIcon: '' })}
+                                style={{ padding: '6px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <RemarkModal
                 isOpen={editingRemark.isOpen}
                 onClose={() => setEditingRemark({ ...editingRemark, isOpen: false })}
@@ -930,66 +1021,73 @@ const formatDecimal = (value) => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const MoneyInput = ({ value, onSave, onFocus }) => {
-    // Initial state based on value
-    const [text, setText] = useState(formatDecimal(value));
-    const [isEditing, setIsEditing] = useState(false);
+const MoneyInput = ({ value, onSave, onFocus, textColor }) => {
+    // We maintain internal state to handle the shifting logic smoothly
+    // and only trigger onSave (which calls API) on blur.
+    const [internalValue, setInternalValue] = useState(0);
 
-    // Sync if external value changes significantly (and not editing)
     useEffect(() => {
-        if (!isEditing) {
-            setText(formatDecimal(value));
+        let val = 0;
+        if (value !== undefined && value !== null) {
+            val = typeof value === 'string' ? parseFloat(value) : value;
         }
-    }, [value, isEditing]);
+        setInternalValue(val || 0);
+    }, [value]);
 
     const handleChange = (e) => {
-        // Allow digits, commas, dots
-        const raw = e.target.value;
-        // Basic filtering could be done here if needed
-        setText(raw);
-    };
-
-    const handleFocus = (e) => {
-        if (onFocus) onFocus(e);
-        setIsEditing(true);
-        e.target.select();
+        const raw = e.target.value.replace(/\D/g, '');
+        const val = raw ? parseFloat(raw) / 100 : 0;
+        setInternalValue(val);
     };
 
     const handleBlur = () => {
-        setIsEditing(false);
-        // Parse "1.234,56" or "1234.56"
-        // 1. Remove thousands separator (.)
-        // 2. Replace decimal separator (,) with (.)
-        let clean = text.replace(/\./g, '').replace(',', '.');
+        if (onSave) {
+            // Check if value actually changed to facilitate change detection/avoid unnecessary saves
+            // Note: value prop might be string or number
+            let parentVal = 0;
+            if (value !== undefined && value !== null) {
+                parentVal = typeof value === 'string' ? parseFloat(value) : value;
+            }
 
-        // Edge case: empty
-        if (!clean) clean = '0';
-
-        let num = parseFloat(clean);
-        if (isNaN(num)) num = 0;
-
-        // Re-format text to look nice immediately (optional, useEffect handles it too but async)
-        setText(formatDecimal(num));
-
-        onSave(num);
+            // Allow small float diff or strict? 
+            if (Math.abs((parentVal || 0) - internalValue) > 0.001) {
+                onSave(internalValue);
+            }
+        }
     };
 
-    // Handle Enter key
+    const handleFocusInternal = (e) => {
+        if (onFocus) onFocus(e);
+        // Optional: Select all on focus for easier replacement
+        // e.target.select(); 
+    };
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.target.blur();
         }
     };
 
+    const formattedValue = (typeof internalValue === 'number' ? internalValue : 0)
+        .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     return (
         <input
             type="text"
-            value={text}
+            value={formattedValue}
             onChange={handleChange}
             onBlur={handleBlur}
-            onFocus={handleFocus}
+            onFocus={handleFocusInternal}
             onKeyDown={handleKeyDown}
-            style={{ width: '100%', border: 'none', textAlign: 'right', outline: 'none', fontSize: '14px' }}
+            style={{
+                width: '100%',
+                textAlign: 'right',
+                border: 'none',
+                background: 'transparent',
+                // outline: 'none', // Removed to match other inputs which show focus outline
+                fontSize: '14px',
+                color: textColor || 'inherit'
+            }}
         />
     );
 };

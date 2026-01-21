@@ -20,4 +20,5 @@ public class TransactionDto {
     private BigDecimal amount;
     private TransactionStatus status;
     private String remark;
+    private String iconName;
 }

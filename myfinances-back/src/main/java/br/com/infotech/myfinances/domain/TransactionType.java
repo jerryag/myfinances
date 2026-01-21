@@ -46,6 +46,9 @@ public class TransactionType {
     @Column(name = "default_amount")
     private BigDecimal defaultAmount;
 
+    @Column(name = "icon_name", length = 50)
+    private String iconName;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

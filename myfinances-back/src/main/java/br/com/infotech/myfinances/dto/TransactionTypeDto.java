@@ -29,4 +29,6 @@ public class TransactionTypeDto {
     private Integer defaultDay;
 
     private BigDecimal defaultAmount;
+
+    private String iconName;
 }

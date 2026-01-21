@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { MessageModal } from '../components/MessageModal';
 import { usePageTitle } from '../context/PageTitleContext';
+import { IconSelector } from '../components/IconSelector';
 
 export function TransactionTypeForm() {
     const navigate = useNavigate();
@@ -14,6 +15,7 @@ export function TransactionTypeForm() {
         recurring: false,
         defaultDay: '',
         defaultAmount: '',
+        iconName: '',
     });
     const [loading, setLoading] = useState(false);
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info', onClose: null });
@@ -161,6 +163,14 @@ export function TransactionTypeForm() {
                             style={{ width: '100%', padding: '8px', marginTop: '5px', textAlign: 'right' }}
                         />
                         <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>Sugere este valor ao selecionar este tipo de transação (se maior que 0).</small>
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: '15px' }}>
+                        <label>Ícone</label>
+                        <IconSelector
+                            selectedIcon={formData.iconName}
+                            onSelect={(iconName) => setFormData({ ...formData, iconName })}
+                        />
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
