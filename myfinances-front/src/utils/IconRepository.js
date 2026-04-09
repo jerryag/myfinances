@@ -41,7 +41,7 @@ export const ICON_GROUPS = {
         'IoBarChartOutline'
     ],
     'Transporte': [
-        'FaCar', 'FaBus', 'FaTaxi', 'FaSubway', 'FaGasPump',
+        'FaCar', 'FaBus', 'FaTaxi', 'FaSubway', 'FaGasPump', 'FaUber',
         'FaBicycle', 'FaPlane', 'FaTrain', 'MdLocalGasStation', 'MdDirectionsCar', 'FaHelicopter', 'FaShip'
     ]
 };
