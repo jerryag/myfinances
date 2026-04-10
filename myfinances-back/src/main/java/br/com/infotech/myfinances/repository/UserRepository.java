@@ -12,9 +12,9 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
-    /**
-     * Recupera um usuário pelo login, ignorando usuários com status DELETED.
-     */
-    @Query("SELECT u FROM User u WHERE u.login = :login AND u.status <> br.com.infotech.myfinances.domain.UserStatus.DELETED")
-    Optional<User> findByLogin(@Param("login") String login);
+  /**
+   * Recupera um usuário pelo login, ignorando usuários com status DELETED.
+   */
+  @Query("SELECT u FROM User u WHERE u.login = :login AND u.status <> br.com.infotech.myfinances.domain.UserStatus.DELETED")
+  Optional<User> findByLogin(@Param("login") String login);
 }

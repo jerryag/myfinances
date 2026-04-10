@@ -52,7 +52,7 @@ export const UserForm = () => {
             navigate('/users');
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || 'Erro ao salvar usuário.');
+            setError(err.response?.data?.detail || 'Erro ao salvar usuário.');
         } finally {
             setLoading(false);
         }

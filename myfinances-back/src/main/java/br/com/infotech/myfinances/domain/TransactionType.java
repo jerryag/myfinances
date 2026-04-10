@@ -17,40 +17,40 @@ import lombok.NoArgsConstructor;
 @Table(name = "transaction_type")
 public class TransactionType {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @NotNull
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @NotNull
+  @ManyToOne
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private TransactionTypeType type;
+  @NotNull
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 10)
+  private TransactionTypeType type;
 
-    @NotBlank
-    @Column(nullable = false, length = 40)
-    private String description;
+  @NotBlank
+  @Column(nullable = false, length = 40)
+  private String description;
 
-    @NotNull
-    @Column(nullable = false)
-    private Boolean recurring;
-    @Column(name = "default_day")
-    @jakarta.validation.constraints.Min(1)
-    @jakarta.validation.constraints.Max(31)
-    private Integer defaultDay;
+  @NotNull
+  @Column(nullable = false)
+  private Boolean recurring;
+  @Column(name = "default_day")
+  @jakarta.validation.constraints.Min(1)
+  @jakarta.validation.constraints.Max(31)
+  private Integer defaultDay;
 
-    @Column(name = "default_amount")
-    private BigDecimal defaultAmount;
+  @Column(name = "default_amount")
+  private BigDecimal defaultAmount;
 
-    @Column(name = "icon_name", length = 50)
-    private String iconName;
+  @Column(name = "icon_name", length = 50)
+  private String iconName;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private TransactionTypeStatus status;
+  @NotNull
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 10)
+  private TransactionTypeStatus status;
 }

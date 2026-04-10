@@ -13,12 +13,12 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionDto {
-    private Long id;
-    private Integer day;
-    private Long transactionTypeId;
-    private String description;
-    private BigDecimal amount;
-    private TransactionStatus status;
-    private String remark;
-    private String iconName;
+  private Long id;
+  private Integer day;
+  private Long transactionTypeId;
+  private String description;
+  private BigDecimal amount;
+  private TransactionStatus status;
+  private String remark;
+  private String iconName;
 }

@@ -13,10 +13,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionMonthDto {
-    private Long id;
-    private Integer month;
-    private Integer year;
-    private String status;
-    private BigDecimal initialBalance;
-    private List<TransactionDto> transactions;
+  private Long id;
+  private Integer month;
+  private Integer year;
+  private String status;
+  private BigDecimal initialBalance;
+  private List<TransactionDto> transactions;
 }

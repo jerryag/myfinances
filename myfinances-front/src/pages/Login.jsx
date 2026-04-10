@@ -21,7 +21,7 @@ export const Login = () => {
             }
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || 'Erro ao realizar login');
+            setError(err.response?.data?.detail || 'Erro ao realizar login');
         }
     };
 

@@ -13,37 +13,39 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+@ExtendWith(SpringExtension.class)
 class UserServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
+  @Mock
+  private UserRepository userRepository;
 
-    @InjectMocks
-    private UserService userService;
+  @InjectMocks
+  private UserService userService;
 
-    @Test
-    void findByLogin_WhenLoginIsValid_ShouldReturnUser() {
-        String login = "admin@infotech.com";
-        User user = new User();
-        user.setLogin(login);
+  @Test
+  void findByLogin_WhenLoginIsValid_ShouldReturnUser() {
+    String login = "admin@infotech.com";
+    User user = new User();
+    user.setLogin(login);
 
-        when(userRepository.findByLogin(login)).thenReturn(Optional.of(user));
+    when(userRepository.findByLogin(login)).thenReturn(Optional.of(user));
 
-        Optional<User> result = userService.findByLogin(login);
+    Optional<User> result = userService.findByLogin(login);
 
-        assertTrue(result.isPresent());
-        assertEquals(login, result.get().getLogin());
-    }
+    assertTrue(result.isPresent());
+    assertEquals(login, result.get().getLogin());
+  }
 
-    @Test
-    void findByLogin_WhenLoginIsNull_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> userService.findByLogin(null));
-    }
+  @Test
+  void findByLogin_WhenLoginIsNull_ShouldThrowException() {
+    assertThrows(br.com.infotech.myfinances.exception.ValidationException.class, () -> userService.findByLogin(null));
+  }
 
-    @Test
-    void findByLogin_WhenLoginIsEmpty_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> userService.findByLogin(""));
-        assertThrows(IllegalArgumentException.class, () -> userService.findByLogin("   "));
-    }
+  @Test
+  void findByLogin_WhenLoginIsEmpty_ShouldThrowException() {
+    assertThrows(br.com.infotech.myfinances.exception.ValidationException.class, () -> userService.findByLogin(""));
+    assertThrows(br.com.infotech.myfinances.exception.ValidationException.class, () -> userService.findByLogin("   "));
+  }
 }

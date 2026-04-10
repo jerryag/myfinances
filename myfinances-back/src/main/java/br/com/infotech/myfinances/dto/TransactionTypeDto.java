@@ -15,20 +15,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TransactionTypeDto {
 
-    private Long id;
+  private Long id;
 
-    @NotNull
-    private TransactionTypeType type;
+  @NotNull
+  private TransactionTypeType type;
 
-    @NotBlank
-    private String description;
+  @NotBlank
+  private String description;
 
-    @NotNull
-    private Boolean recurring;
+  @NotNull
+  private Boolean recurring;
 
-    private Integer defaultDay;
+  private Integer defaultDay;
 
-    private BigDecimal defaultAmount;
+  private BigDecimal defaultAmount;
 
-    private String iconName;
+  private String iconName;
 }

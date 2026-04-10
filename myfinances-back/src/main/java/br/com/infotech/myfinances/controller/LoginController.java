@@ -16,15 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LoginController implements ILoginController {
 
-    private final UserService userService;
+  private final UserService userService;
 
-    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    @Override
-    public ResponseEntity<UserDto> login(
-            @RequestParam("login") String login,
-            @RequestParam("password") String password) {
+  @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+  @Override
+  public ResponseEntity<UserDto> login(@RequestParam("login") String login, @RequestParam("password") String password) {
 
-        UserDto userDto = userService.login(login, password);
-        return ResponseEntity.ok(userDto);
-    }
+    UserDto userDto = userService.login(login, password);
+    return ResponseEntity.ok(userDto);
+  }
 }

@@ -71,7 +71,7 @@ export function TransactionTypeForm() {
             }
         } catch (error) {
             console.error('Erro ao salvar:', error);
-            const msg = error.response?.data?.message || 'Erro ao salvar.';
+            const msg = error.response?.data?.detail || 'Erro ao salvar.';
             setMessageModal({
                 isOpen: true,
                 title: 'Erro',

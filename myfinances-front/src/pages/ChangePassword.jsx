@@ -72,7 +72,7 @@ export const ChangePassword = () => {
             window.location.reload(); // Reload to ensure context picks up the new user state if needed
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || 'Erro ao alterar a senha.');
+            setError(err.response?.data?.detail || 'Erro ao alterar a senha.');
         }
     };
 

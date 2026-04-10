@@ -9,5 +9,5 @@ import java.util.Optional;
 
 @Repository
 public interface TransactionMonthRepository extends JpaRepository<TransactionMonth, Long> {
-    Optional<TransactionMonth> findByUserAndMonthAndYear(User user, Integer month, Integer year);
+  Optional<TransactionMonth> findByUserAndMonthAndYear(User user, Integer month, Integer year);
 }

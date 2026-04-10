@@ -8,7 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Data
 @Builder
@@ -18,48 +19,48 @@ import java.time.LocalDateTime;
 @Table(name = "transaction")
 public class Transaction {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "transaction_type_id", nullable = false)
-    private TransactionType transactionType;
+  @ManyToOne
+  @JoinColumn(name = "transaction_type_id", nullable = false)
+  private TransactionType transactionType;
 
-    @ManyToOne
-    @JoinColumn(name = "transaction_month_id", nullable = false)
-    private TransactionMonth transactionMonth;
+  @ManyToOne
+  @JoinColumn(name = "transaction_month_id", nullable = false)
+  private TransactionMonth transactionMonth;
 
-    @Column(name = "transaction_date", nullable = false)
-    private LocalDate transactionDate;
+  @Column(name = "transaction_date", nullable = false)
+  private LocalDate transactionDate;
 
-    @Column(nullable = true, length = 50)
-    private String description;
+  @Column(nullable = true, length = 50)
+  private String description;
 
-    @Column(nullable = false)
-    private BigDecimal amount;
+  @Column(nullable = false)
+  private BigDecimal amount;
 
-    @Column(nullable = false, length = 20)
-    @Enumerated(EnumType.STRING)
-    private TransactionStatus status;
+  @Column(nullable = false, length = 20)
+  @Enumerated(EnumType.STRING)
+  private TransactionStatus status;
 
-    @Column(length = 100)
-    private String remark;
+  @Column(length = 100)
+  private String remark;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+  @Column(name = "created_at", nullable = false)
+  private OffsetDateTime createdAt;
 
-    @Column(name = "icon_name", length = 50)
-    private String iconName;
+  @Column(name = "icon_name", length = 50)
+  private String iconName;
 
-    @PrePersist
-    public void prePersist() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
+  @PrePersist
+  public void prePersist() {
+    if (createdAt == null) {
+      createdAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
+  }
 }

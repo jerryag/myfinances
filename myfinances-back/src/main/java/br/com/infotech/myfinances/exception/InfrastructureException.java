@@ -1,0 +1,14 @@
+package br.com.infotech.myfinances.exception;
+
+public class InfrastructureException extends RuntimeException {
+
+  private static final long serialVersionUID = 1L;
+
+  public InfrastructureException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
+  public InfrastructureException(Throwable cause) {
+    super(cause);
+  }
+}

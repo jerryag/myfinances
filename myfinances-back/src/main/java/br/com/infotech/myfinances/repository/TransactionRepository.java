@@ -13,11 +13,13 @@ import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    List<Transaction> findByTransactionMonthOrderByTransactionDateAsc(TransactionMonth transactionMonth);
+  List<Transaction> findByTransactionMonthOrderByTransactionDateAsc(TransactionMonth transactionMonth);
 
-    Optional<Transaction> findFirstByUserAndTransactionTypeAndAmountGreaterThanOrderByTransactionDateDesc(User user,
-            TransactionType transactionType, java.math.BigDecimal amount);
+  Optional<Transaction> findFirstByUserAndTransactionTypeAndAmountGreaterThanOrderByTransactionDateDesc(User user, TransactionType transactionType,
+                                                                                                        java.math.BigDecimal amount);
 
-    Optional<Transaction> findFirstByUserAndTransactionTypeAndDescriptionAndAmountGreaterThanOrderByTransactionDateDesc(
-            User user, TransactionType transactionType, String description, java.math.BigDecimal amount);
+  Optional<Transaction> findFirstByUserAndTransactionTypeAndDescriptionAndAmountGreaterThanOrderByTransactionDateDesc(User user,
+                                                                                                                      TransactionType transactionType,
+                                                                                                                      String description,
+                                                                                                                      java.math.BigDecimal amount);
 }

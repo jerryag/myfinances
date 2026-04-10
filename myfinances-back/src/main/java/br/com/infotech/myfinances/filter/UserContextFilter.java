@@ -19,35 +19,34 @@ import java.util.Optional;
 @Slf4j
 public class UserContextFilter extends OncePerRequestFilter {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+  @Override
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
 
-        String userLogin = request.getHeader("X-User-Login");
-        log.info("Processing request: {} {}. User Login Header: {}", request.getMethod(), request.getRequestURI(),
-                userLogin);
+    String userLogin = request.getHeader("X-User-Login");
+    log.info("Processing request: {} {}. User Login Header: {}", request.getMethod(), request.getRequestURI(), userLogin);
 
-        if (userLogin != null && !userLogin.isBlank()) {
-            Optional<User> userOptional = userRepository.findByLogin(userLogin);
-            if (userOptional.isPresent()) {
-                UserContext.setCurrentUser(userOptional.get());
-                log.info("User context set for login: {}", userLogin);
-            } else {
-                log.warn("User not found for login: {}", userLogin);
-            }
-        } else {
-            log.info("No X-User-Login header found");
-        }
-
-        try {
-            filterChain.doFilter(request, response);
-        } catch (Exception e) {
-            log.error("Error in filter chain", e);
-            throw e;
-        } finally {
-            UserContext.clear();
-        }
+    if (userLogin != null && !userLogin.isBlank()) {
+      Optional<User> userOptional = userRepository.findByLogin(userLogin);
+      if (userOptional.isPresent()) {
+        UserContext.setCurrentUser(userOptional.get());
+        log.info("User context set for login: {}", userLogin);
+      } else {
+        log.warn("User not found for login: {}", userLogin);
+      }
+    } else {
+      log.info("No X-User-Login header found");
     }
+
+    try {
+      filterChain.doFilter(request, response);
+    } catch (Exception e) {
+      log.error("Error in filter chain", e);
+      throw e;
+    } finally {
+      UserContext.clear();
+    }
+  }
 }
