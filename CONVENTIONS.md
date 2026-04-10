@@ -8,10 +8,9 @@
     - Extraia literais de `String` repetidos para `private static final String` no topo da classe.
     - Remova obrigatoriamente imports e variáveis não utilizados.
 
-## 2. Nomenclatura e Idioma no Código
+## 2. Idioma no Código
 - **Código:** Nomes de classes, tipos, enums, atributos, métodos e variáveis devem ser em **Inglês**.
-- **Documentação Interna:** Comentários e Javadoc devem ser em **Português (Brasil)**.
-- **Exceção SOAP:** Classes stub geradas pelo CFX no subpacote `soap` devem manter os nomes originais dos XSDs.
+- **Documentação Interna:** Comentários avulsos e documentações Javadoc devem ser em **Português (Brasil)**.
 
 ## 3. Padrões Arquiteturais e Frameworks
 - **Princípios:** 

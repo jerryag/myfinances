@@ -74,13 +74,16 @@ public class TransactionMonthService {
         dayToUse = maxDayInNewMonth;
       }
 
+      BigDecimal amountToUse = type.getDefaultAmount() != null ? type.getDefaultAmount() : BigDecimal.ZERO;
+      String descToUse = type.getDescription() != null ? type.getDescription() : "";
+
       Transaction transaction = Transaction.builder()
                                            .user(user)
                                            .transactionType(type)
                                            .transactionMonth(savedMonth)
                                            .transactionDate(LocalDate.of(year, month, dayToUse))
-                                           .description("")
-                                           .amount(BigDecimal.ZERO)
+                                           .description(descToUse)
+                                           .amount(amountToUse)
                                            .status(TransactionStatus.PENDING)
                                            .createdAt(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC))
                                            .build();
