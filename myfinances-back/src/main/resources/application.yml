@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: myfinances-back
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/myfinances
   datasource:
     url: jdbc:postgresql://localhost:5432/myfinance_db
     username: admin

@@ -13,6 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class UserContextFilter extends OncePerRequestFilter {
     String userLogin = request.getHeader("X-User-Login");
     log.info("Processing request: {} {}. User Login Header: {}", request.getMethod(), request.getRequestURI(), userLogin);
 
-    if (userLogin != null && !userLogin.isBlank()) {
+    if (StringUtils.isNotBlank(userLogin)) {
       Optional<User> userOptional = userRepository.findByLogin(userLogin);
       if (userOptional.isPresent()) {
         UserContext.setCurrentUser(userOptional.get());

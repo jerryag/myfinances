@@ -7,6 +7,9 @@
     - Adicione `serialVersionUID` em toda classe `Serializable`.
     - Extraia literais de `String` repetidos para `private static final String` no topo da classe.
     - Remova obrigatoriamente imports e variáveis não utilizados.
+    - Ao incluir novos starters no arquivo `pom.xml` colocá-los sempre antes das demais dependências, ou seja, no início da tag `<dependencies>`, após o último starter declarado.
+    - Ao incluir novas dependências no arquivo `pom.xml` colocá-las sempre após as dependências já existentes, ou seja, no final da tag `<dependencies>`.
+    - Ao incluir novas dependências no arquivo `pom.xml`, criar uma property para configuração de versão na tag `<properties>` e utilizar esta property na tag `<dependency>`.
 
 ## 2. Idioma no Código
 - **Código:** Nomes de classes, tipos, enums, atributos, métodos e variáveis devem ser em **Inglês**.
@@ -86,3 +89,14 @@
 - Proibido métodos com mais de 30 linhas de lógica. Se isso acontecer, dividir a lógica em sub métodos.
 - A criação ou atribuição de objetos grandes, seja com construtor, setters ou builder, não é considerada lógica, nesse caso, não é proibido ultrapassar a quantidade limite de linhas. Se a criação do objeto for feita em até 10 linhas, pode manter dentro do método principal, mas se passar disso, usar um método privado específico para a criação do objeto (ex: var obj = createObject()).
 - Proibido criar métodos ou construtores que recebam mais que 5 parâmetros. Se isso acontecer, criar uma classe para representar os parâmetros.
+
+
+# React e NodeJS Engineering Conventions
+
+## 1. Formatação e Estilo
+- **Regras Específicas:**
+    - Extraia literais de `String` repetidos para uma constante no topo do arquivo.
+
+## 2. Idioma no Código
+- **Código:** Nomes de arquivos, objetos, tipos, constantes, atributos, funções e variáveis devem ser em **Inglês**.
+- **Documentação Interna:** Comentários avulsos e documentações devem ser em **Português (Brasil)**.

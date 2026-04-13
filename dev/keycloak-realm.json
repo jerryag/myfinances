@@ -1,0 +1,24 @@
+{
+  "realm": "myfinances",
+  "enabled": true,
+  "displayName": "My Finances Local OIDC",
+  "clients": [
+    {
+      "clientId": "myfinances-front",
+      "name": "Frontend Application",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "supersecret123",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "webOrigins": [
+        "*"
+      ]
+    }
+  ]
+}
