@@ -55,7 +55,6 @@ public class UserService {
    * @throws ValidationException se o login for nulo ou vazio.
    */
   public Optional<User> findByLogin(String login) {
-    log.debug("Buscando usuário pelo login: {}", login);
     ValidationUtils.hasText(login, "Login obrigatório");
     return userRepository.findByLogin(login);
   }
@@ -66,9 +65,10 @@ public class UserService {
    * @param login    O login do usuário.
    * @param password A senha do usuário.
    * @return Um DTO com as informações do usuário autenticado.
-   * @throws ValidationException se o login ou senha forem nulos ou vazios.
-   * @throws BadCredentialsException se o usuário não for encontrado, ou a senha estiver incorreta.
-   * @throws BlockedUserException se o usuário estiver com status BLOCKED.
+   * @throws ValidationException     se o login ou senha forem nulos ou vazios.
+   * @throws BadCredentialsException se o usuário não for encontrado, ou a senha
+   *                                 estiver incorreta.
+   * @throws BlockedUserException    se o usuário estiver com status BLOCKED.
    */
   public UserDto login(String login, String password) {
     log.debug("Iniciando rotina de login para o usuário: {}", login);
@@ -102,10 +102,12 @@ public class UserService {
    * @param userId      O ID do usuário.
    * @param oldPassword A senha atual.
    * @param newPassword A nova senha desejada.
-   * @throws ValidationException se as senhas não forem fornecidas.
-   * @throws BusinessException se o usuário não for encontrado.
-   * @throws BadCredentialsException se a senha atual informada estiver incorreta.
-   * @throws InvalidNewPasswordDataException se a nova senha não obedecer aos critérios de segurança.
+   * @throws ValidationException             se as senhas não forem fornecidas.
+   * @throws BusinessException               se o usuário não for encontrado.
+   * @throws BadCredentialsException         se a senha atual informada estiver
+   *                                         incorreta.
+   * @throws InvalidNewPasswordDataException se a nova senha não obedecer aos
+   *                                         critérios de segurança.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public void changePassword(Long userId, String oldPassword, String newPassword) {
@@ -158,7 +160,6 @@ public class UserService {
    * @return Uma página de usuários em formato DTO.
    */
   public Page<UserDto> findAll(List<UserStatus> statuses, Pageable pageable) {
-    log.debug("Buscando todos os usuários filtrados pelos status: {}", statuses);
     Specification<User> spec = (root, query, cb) -> {
       if (statuses != null && !statuses.isEmpty()) {
         return cb.and(root.get("status").in(statuses), cb.notEqual(root.get("type"), UserType.MASTER));
@@ -182,8 +183,10 @@ public class UserService {
    *
    * @param userDto DTO contendo os dados do usuário a ser criado.
    * @return O DTO do usuário criado.
-   * @throws ValidationException se algum campo obrigatório não estiver preenchido.
-   * @throws BusinessException se o login já existir ou se o tipo de usuário for MASTER.
+   * @throws ValidationException se algum campo obrigatório não estiver
+   *                             preenchido.
+   * @throws BusinessException   se o login já existir ou se o tipo de usuário for
+   *                             MASTER.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public UserDto create(UserDto userDto) {
@@ -231,7 +234,9 @@ public class UserService {
    * @param userDto Novos dados do usuário.
    * @return O DTO do usuário atualizado.
    * @throws ValidationException se os dados forem inválidos.
-   * @throws BusinessException se o login já existir, se o usuário não for encontrado ou se houver tentativa de mudar para MASTER.
+   * @throws BusinessException   se o login já existir, se o usuário não for
+   *                             encontrado ou se houver tentativa de mudar para
+   *                             MASTER.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public UserDto update(Long id, UserDto userDto) {

@@ -3,6 +3,7 @@ package br.com.infotech.myfinances.service;
 import br.com.infotech.myfinances.domain.TransactionType;
 import br.com.infotech.myfinances.domain.TransactionTypeStatus;
 import br.com.infotech.myfinances.domain.TransactionTypeType;
+import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.dto.TransactionTypeDto;
 import br.com.infotech.myfinances.repository.TransactionTypeRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -144,6 +145,16 @@ public class TransactionTypeService {
         .filter(t -> t.getUser().getId().equals(userService.getCurrentUser().getId()))
         .filter(t -> t.getStatus() == TransactionTypeStatus.ACTIVE)
         .orElseThrow(() -> new EntityNotFoundException("Tipo de transação não encontrado."));
+  }
+
+  /**
+   * Retorna os tipos de transação recorrentes e ativos de um determinado usuário.
+   *
+   * @param user O usuário dono dos tipos de transação.
+   * @return Lista de {@link TransactionType} recorrentes e com status {@link TransactionTypeStatus#ACTIVE}.
+   */
+  public List<TransactionType> findRecurringActiveByUser(User user) {
+    return transactionTypeRepository.findByUserAndStatusAndRecurringTrue(user, TransactionTypeStatus.ACTIVE);
   }
 
   private TransactionTypeDto toDTO(TransactionType entity) {

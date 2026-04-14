@@ -20,4 +20,13 @@ public interface TransactionTypeRepository extends JpaRepository<TransactionType
       + "(:description IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', CAST(:description AS text), '%'))) AND " + "t.type IN :types")
   Page<TransactionType> search(@Param("user") User user, @Param("status") TransactionTypeStatus status, @Param("description") String description,
                                @Param("types") List<TransactionTypeType> types, Pageable pageable);
+
+  /**
+   * Busca os tipos de transação recorrentes e ativos de um determinado usuário.
+   *
+   * @param user   O usuário dono dos tipos de transação.
+   * @param status O status desejado.
+   * @return Lista de tipos de transação recorrentes e ativos do usuário.
+   */
+  List<TransactionType> findByUserAndStatusAndRecurringTrue(User user, TransactionTypeStatus status);
 }

@@ -54,6 +54,7 @@
     3. Erros de API devem seguir o padrão RFC 7807 (Problem Details for HTTP APIs).
     4. Exceções que forem lançadas pela camada de serviço mas que o método chamador não for um método de Controller devem subir até serem logadas pelo framework ou JDK.
     5. Mais detalhes sobre o mecanismo de exceções na skill `java-exception-mechanism-expert.md`.
+
 ## 4. Estrutura de pacotes e Naming Conventions
 - **Packages:**
     1. A package raiz será `br.com.infotech.myfinances`.
@@ -84,11 +85,14 @@
        1.3. `tipo` é um dos seguintes valores "ddl" ou "dml", conforme sua natureza. No caso de scripts do tipo ddl, usar somente um comando DDL por script. 
        1.4. `description` é uma descrição do script. Usar lower case e `_` para separar palavras. Usar o idioma inglês para a descrição. A descrição deve representar o que o script faz de forma sucinta.
 
-## 6. Guardrails
+## 6. Outros pontos a observar
 - Proibido *full qualified names* (FQNs) no corpo do código, exceto em colisões de nomes de classes na mesma unidade de compilação.
-- Proibido métodos com mais de 30 linhas de lógica. Se isso acontecer, dividir a lógica em sub métodos.
-- A criação ou atribuição de objetos grandes, seja com construtor, setters ou builder, não é considerada lógica, nesse caso, não é proibido ultrapassar a quantidade limite de linhas. Se a criação do objeto for feita em até 10 linhas, pode manter dentro do método principal, mas se passar disso, usar um método privado específico para a criação do objeto (ex: var obj = createObject()).
+- Não usar imports com wildcard (`*`). Importar sempre cada classe separadamente, inclusive no caso de `import static`.
+- Proibido métodos com mais de 30 linhas de lógica. Se isso acontecer, dividir a lógica em sub métodos. A criação ou atribuição de objetos grandes, seja com construtor, setters ou builder, não é considerada lógica, nesse caso, não é proibido ultrapassar a quantidade limite de linhas. Se a criação do objeto for feita em até 10 linhas, pode manter dentro do método principal, mas se passar disso, usar um método privado específico para a criação do objeto (ex: var obj = createObject()).
 - Proibido criar métodos ou construtores que recebam mais que 5 parâmetros. Se isso acontecer, criar uma classe para representar os parâmetros.
+- Toda vez que uma classe for refatorada, verificar se não sobrou algum import desnecessário.
+- Toda vez que uma classe for refatorada e a mesma possuir testes unitários, atualizar os testes unitários para refletirem o novo comportamento.
+- Sempre que fizer alterações que afetam mais que 50 linhas de código ou mais que 3 arquivos `.java`, executar um mvn compile para verificar se está compilando sem erros.
 
 
 # React e NodeJS Engineering Conventions
