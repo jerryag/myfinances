@@ -16,21 +16,42 @@ cleanup() {
 # Captura sinais de interrupção ou término para executar a função cleanup
 trap cleanup SIGINT SIGTERM EXIT
 
-STATUS=$(docker inspect -f '{{.State.Health.Status}}' myfinances-db 2>/dev/null)
+DB_STATUS=$(docker inspect -f '{{.State.Health.Status}}' myfinances-db 2>/dev/null)
 
-if [ "$STATUS" == "healthy" ]; then
+if [ "$DB_STATUS" == "healthy" ]; then
   echo "Banco de Dados PostgreSQL já está em execução e pronto!"
 else
     echo "Iniciando Banco de Dados PostgreSQL..."
     cd dev
-    docker compose up -d
+    docker compose up -d database
     cd ..
 
     echo "Aguardando inicialização do banco de dados..."
   for i in {1..15}; do
-    STATUS=$(docker inspect -f '{{.State.Health.Status}}' myfinances-db 2>/dev/null)
-    if [ "$STATUS" == "healthy" ]; then
+    DB_STATUS=$(docker inspect -f '{{.State.Health.Status}}' myfinances-db 2>/dev/null)
+    if [ "$DB_STATUS" == "healthy" ]; then
       echo "Banco de dados pronto!"
+      break
+    fi
+    sleep 2
+  done
+fi
+
+KC_STATUS=$(docker inspect -f '{{.State.Status}}' myfinances-keycloak 2>/dev/null)
+
+if [ "$KC_STATUS" == "running" ]; then
+  echo "Keycloak já está em execução e pronto!"
+else
+    echo "Iniciando Keycloak..."
+    cd dev
+    docker compose up -d keycloak
+    cd ..
+
+    echo "Aguardando inicialização do Keycloak..."
+  for i in {1..15}; do
+    KC_STATUS=$(docker inspect -f '{{.State.Status}}' myfinances-keycloak 2>/dev/null)
+    if [ "$KC_STATUS" == "running" ]; then
+      echo "Keycloak iniciou com sucesso!"
       break
     fi
     sleep 2

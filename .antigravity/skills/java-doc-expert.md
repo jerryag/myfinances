@@ -9,4 +9,5 @@ Capacidade de gerar Javadoc técnico e preciso em português para métodos e cla
 2. Escrever Javadoc em **Português (Brasil)**.
 3. Descrever parâmetros (`@param`), retorno (`@return`) e exceções (`@throws`) de forma clara.
 4. Usar `@link` para referenciar outros métodos ou classes.
-5. Garantir que a explicação reflita a lógica de negócio implementada.
+5. Não usar *full qualified names* (FQNs) no Javadoc, exceto em colisões de nomes de classes na mesma unidade de compilação. Se for necessário referenciar uma classe no Javadoc, usar o nome da classe e adicionar a classe referenciada no import.
+6. Garantir que a explicação reflita a lógica de negócio implementada.

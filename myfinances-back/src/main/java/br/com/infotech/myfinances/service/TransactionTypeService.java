@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import org.springframework.transaction.annotation.Propagation;
+import br.com.infotech.myfinances.exception.TransactionTypeChangeTypeException;
 import br.com.infotech.myfinances.exception.BusinessException;
+import br.com.infotech.myfinances.exception.ValidationException;
 import br.com.infotech.myfinances.util.ValidationUtils;
 
 @Service
@@ -32,13 +34,11 @@ public class TransactionTypeService {
    * Busca os tipos de transação com suporte a filtros e paginação.
    *
    * @param description Filtro por descrição.
-   * @param types Lista de tipos (INCOME, EXPENSE, etc) em string.
-   * @param pageable Informações de paginação e ordenação da consulta.
+   * @param types       Lista de tipos (INCOME, EXPENSE, etc) em string.
+   * @param pageable    Informações de paginação e ordenação da consulta.
    * @return Página de {@link TransactionTypeDto}.
    */
   public Page<TransactionTypeDto> findAll(String description, List<String> types, Pageable pageable) {
-    log.debug("Finding all transaction types. Description: {}, Types: {}", description, types);
-
     List<TransactionTypeType> typeEnums;
     if (types != null && !types.isEmpty()) {
       typeEnums = types.stream().map(TransactionTypeType::valueOf).toList();
@@ -46,8 +46,9 @@ public class TransactionTypeService {
       typeEnums = java.util.Arrays.asList(TransactionTypeType.values());
     }
 
-    return transactionTypeRepository.search(userService.getCurrentUser(), TransactionTypeStatus.ACTIVE, description, typeEnums, pageable)
-                                    .map(this::toDTO);
+    return transactionTypeRepository
+        .search(userService.getCurrentUser(), TransactionTypeStatus.ACTIVE, description, typeEnums, pageable)
+        .map(this::toDTO);
   }
 
   /**
@@ -55,8 +56,8 @@ public class TransactionTypeService {
    *
    * @param id ID do tipo de transação.
    * @return O tipo de transação em formato DTO.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se o ID não for informado.
-   * @throws jakarta.persistence.EntityNotFoundException se não for encontrado.
+   * @throws ValidationException se o ID não for informado.
+   * @throws EntityNotFoundException se não for encontrado.
    */
   public TransactionTypeDto findById(Long id) {
     ValidationUtils.notNull(id, "ID obrigatório");
@@ -68,24 +69,25 @@ public class TransactionTypeService {
    *
    * @param dto DTO com os dados do novo tipo.
    * @return DTO correspondente ao tipo criado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se campos obrigatórios não forem fornecidos.
+   * @throws ValidationException se campos obrigatórios não forem fornecidos.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionTypeDto create(TransactionTypeDto dto) {
+    log.debug("Iniciando criação de um novo tipo de transação da categoria: {}", dto != null ? dto.getType() : null);
     ValidationUtils.notNull(dto, "Objeto da transação é obrigatório");
     ValidationUtils.notNull(dto.getType(), "O tipo é obrigatório");
     ValidationUtils.hasText(dto.getDescription(), "A descrição é obrigatória");
 
     TransactionType entity = TransactionType.builder()
-                                            .user(userService.getCurrentUser())
-                                            .type(dto.getType())
-                                            .description(dto.getDescription())
-                                            .recurring(dto.getRecurring() != null ? dto.getRecurring() : false)
-                                            .defaultDay(dto.getDefaultDay())
-                                            .defaultAmount(dto.getDefaultAmount())
-                                            .status(TransactionTypeStatus.ACTIVE)
-                                            .iconName(dto.getIconName())
-                                            .build();
+        .user(userService.getCurrentUser())
+        .type(dto.getType())
+        .description(dto.getDescription())
+        .recurring(dto.getRecurring() != null ? dto.getRecurring() : false)
+        .defaultDay(dto.getDefaultDay())
+        .defaultAmount(dto.getDefaultAmount())
+        .status(TransactionTypeStatus.ACTIVE)
+        .iconName(dto.getIconName())
+        .build();
 
     return toDTO(transactionTypeRepository.save(entity));
   }
@@ -93,14 +95,15 @@ public class TransactionTypeService {
   /**
    * Atualiza um tipo de transação ativo existente.
    *
-   * @param id ID do tipo a atualizar.
+   * @param id  ID do tipo a atualizar.
    * @param dto Novos dados para o tipo de transação.
    * @return O tipo atualizado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se id ou dto forem nulos, ou faltando informações obrigatórias.
-   * @throws BusinessException se houver tentativa de alteração do Tipo fundamental (INCOME/EXPENSE).
+   * @throws ValidationException se id ou dto forem nulos, ou faltando informações obrigatórias.
+   * @throws TransactionTypeChangeTypeException se houver tentativa de alteração do tipo fundamental (INCOME/EXPENSE).
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionTypeDto update(Long id, TransactionTypeDto dto) {
+    log.debug("Iniciando atualização de tipo de transação com ID: {}", id);
     ValidationUtils.notNull(id, "ID obrigatório");
     ValidationUtils.notNull(dto, "Objeto da transação é obrigatório");
     ValidationUtils.hasText(dto.getDescription(), "A descrição é obrigatória");
@@ -109,7 +112,7 @@ public class TransactionTypeService {
 
     // Algumas regras negociais: não altera o tipo
     if (dto.getType() != null && !dto.getType().equals(entity.getType())) {
-      throw new BusinessException("O tipo de transação não pode ser alterado.");
+      throw new TransactionTypeChangeTypeException("O tipo de transação não pode ser alterado.");
     }
 
     entity.setDescription(dto.getDescription());
@@ -125,10 +128,11 @@ public class TransactionTypeService {
    * Remove (exclusão lógica) do tipo de transação.
    *
    * @param id ID do tipo a ser removido.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se o ID for nulo.
+   * @throws ValidationException se o ID for nulo.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public void delete(Long id) {
+    log.debug("Iniciando exclusão lógica do tipo de transação com ID: {}", id);
     ValidationUtils.notNull(id, "ID obrigatório");
     TransactionType entity = findByIdOrThrow(id);
     entity.setStatus(TransactionTypeStatus.DELETED);
@@ -137,20 +141,20 @@ public class TransactionTypeService {
 
   private TransactionType findByIdOrThrow(Long id) {
     return transactionTypeRepository.findById(id)
-                                    .filter(t -> t.getUser().getId().equals(userService.getCurrentUser().getId()))
-                                    .filter(t -> t.getStatus() == TransactionTypeStatus.ACTIVE)
-                                    .orElseThrow(() -> new EntityNotFoundException("Tipo de transação não encontrado."));
+        .filter(t -> t.getUser().getId().equals(userService.getCurrentUser().getId()))
+        .filter(t -> t.getStatus() == TransactionTypeStatus.ACTIVE)
+        .orElseThrow(() -> new EntityNotFoundException("Tipo de transação não encontrado."));
   }
 
   private TransactionTypeDto toDTO(TransactionType entity) {
     return TransactionTypeDto.builder()
-                             .id(entity.getId())
-                             .type(entity.getType())
-                             .description(entity.getDescription())
-                             .recurring(entity.getRecurring())
-                             .defaultDay(entity.getDefaultDay())
-                             .defaultAmount(entity.getDefaultAmount())
-                             .iconName(entity.getIconName())
-                             .build();
+        .id(entity.getId())
+        .type(entity.getType())
+        .description(entity.getDescription())
+        .recurring(entity.getRecurring())
+        .defaultDay(entity.getDefaultDay())
+        .defaultAmount(entity.getDefaultAmount())
+        .iconName(entity.getIconName())
+        .build();
   }
 }

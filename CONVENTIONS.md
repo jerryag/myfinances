@@ -13,7 +13,9 @@
 
 ## 2. Idioma no Código
 - **Código:** Nomes de classes, tipos, enums, atributos, métodos e variáveis devem ser em **Inglês**.
-- **Documentação Interna:** Comentários avulsos e documentações Javadoc devem ser em **Português (Brasil)**.
+- **Documentação de Código:** Todos os comentários de raciocínio lógico, otimizações `// Optimize`, comentários de TODO list, marcações de Custom Sort, tie-breakers e fallbacks de fallback devem ser em **Português (Brasil)**.
+- **Javadocs:** Documentações Javadoc devem ser em **Português (Brasil)**.
+- **Logs:** Logs devem ser em **Português (Brasil)**.
 
 ## 3. Padrões Arquiteturais e Frameworks
 - **Princípios:** 
@@ -21,8 +23,8 @@
     2. Utilizar interfaces funcionais onde possível.
     3. Utilizar Streams API onde possível.
     4. Utilizar Optional onde possível.
-    5. Utilizar try-with-resources onde possível.
-    6. Utilizar try-finally com close() sempre que um resource for aberto e não for possível utilizar try-with-resources.
+    5. Utilizar `try-with-resources` onde possível.
+    6. Utilizar `try-finally` com `close()` sempre que um resource for aberto e não for possível utilizar `try-with-resources`.
     7. Todas as respostas de sucesso da API devem retornar um `ResponseEntity` encapsulando um DTO específico ou uma coleção, nunca a entidade de domínio (domain) diretamente.
     8. Utilizar `StringUtils.isBlank()` / `StringUtils.isNotBlank()` da Apache Commons para verificar se Strings são (ou não) nulas ou vazias.
     9. Para campos de data e hora, utilizar sempre java.time.OffsetDateTime ou java.time.Instant para garantir a precisão de fuso horário. Evitar o uso de java.util.Date ou java.time.LocalDateTime em tabelas de transações.
@@ -31,9 +33,6 @@
 - **Lombok:** 
     1. Classes DTO e Domain devem usar anotações Lombok e `@Builder` (sem ocultar construtores NoArgs/AllArgs).
     2. Classes `@Configuration` ou `@Service` que tiverem algum log, devem ser anotadas com `@Slf4j`.
-- **Logging:**
-    1. Utilizar SLF4J com level DEBUG no início de blocos de linhas que realizam alguma operação específica e relevante dentro do código.
-    2. Não logar ERROR ou WARN nos catches. Todo método que precisar lançar uma exceção, checada ou não, deve lançá-la e haverá um `@ControllerAdvice` ou `@RestControllerAdvice` para tratar as exceções.
 - **Persistência (JPA):** 
     1. Prioridade: `methodQuery`.
     2. Segunda opção: JPQL anotada.
@@ -48,12 +47,13 @@
     5. Todo parâmetro de método de serviço deve ser considerado obrigatório a não ser que o código a seguir deixe implícito que o parâmetro é opcional.
     6. Ao capturar exceções checadas, mas que de alguma forma são consideradas exceções de infraestrutura (ex: IOException, JacksonException), encapsulá-las e relançar a exceção não checada a ser criada `InfrastructureException` (extende RuntimeException). É obrigatório preservar a Stack Trace original passando a exceção capturada como parâmetro no construtor da nova exceção.
     7. Dependências devem ser injetadas via construtor, porém se a classe de serviço tiver mais que 5 dependências, então elas devem ser injetadas com `@Autowired`.
-    8. Properties devem ser injetadas com `@Value`.
+    8. Properties devem ser injetadas com `@Value` na definição do atributo na classe, e não no construtor.
 - **Tratamento de exceções:**
     1. Toda exceção que chegar à camada de controller deve ser tratada em um `@ControllerAdvice` ou `@RestControllerAdvice`.
     2. Toda exceção deve ser lançada e não tratada no método que a lançou, exceto para casos onde aquela exceção PRECISAR ser tratada (e não relançada) de acordo com alguma regra de negócio ou necessidade específica.
     3. Erros de API devem seguir o padrão RFC 7807 (Problem Details for HTTP APIs).
     4. Exceções que forem lançadas pela camada de serviço mas que o método chamador não for um método de Controller devem subir até serem logadas pelo framework ou JDK.
+    5. Mais detalhes sobre o mecanismo de exceções na skill `java-exception-mechanism-expert.md`.
 ## 4. Estrutura de pacotes e Naming Conventions
 - **Packages:**
     1. A package raiz será `br.com.infotech.myfinances`.
@@ -85,7 +85,7 @@
        1.4. `description` é uma descrição do script. Usar lower case e `_` para separar palavras. Usar o idioma inglês para a descrição. A descrição deve representar o que o script faz de forma sucinta.
 
 ## 6. Guardrails
-- Proibido nomes *full-qualified* no corpo do código, exceto em colisões de nomes de classes na mesma unidade de compilação.
+- Proibido *full qualified names* (FQNs) no corpo do código, exceto em colisões de nomes de classes na mesma unidade de compilação.
 - Proibido métodos com mais de 30 linhas de lógica. Se isso acontecer, dividir a lógica em sub métodos.
 - A criação ou atribuição de objetos grandes, seja com construtor, setters ou builder, não é considerada lógica, nesse caso, não é proibido ultrapassar a quantidade limite de linhas. Se a criação do objeto for feita em até 10 linhas, pode manter dentro do método principal, mas se passar disso, usar um método privado específico para a criação do objeto (ex: var obj = createObject()).
 - Proibido criar métodos ou construtores que recebam mais que 5 parâmetros. Se isso acontecer, criar uma classe para representar os parâmetros.

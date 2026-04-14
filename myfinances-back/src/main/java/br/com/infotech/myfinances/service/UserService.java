@@ -14,15 +14,22 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.infotech.myfinances.exception.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.transaction.annotation.Propagation;
+import br.com.infotech.myfinances.exception.UserNotFoundException;
+import br.com.infotech.myfinances.exception.LoginAlreadyExistsException;
+import br.com.infotech.myfinances.exception.MasterUserNotAllowedException;
+import br.com.infotech.myfinances.exception.UserNotAuthenticatedException;
 import br.com.infotech.myfinances.exception.BusinessException;
 import br.com.infotech.myfinances.util.ValidationUtils;
+import br.com.infotech.myfinances.context.UserContext;
 
 @Service
 @Transactional(propagation = Propagation.SUPPORTS)
@@ -33,6 +40,9 @@ public class UserService {
 
   private final UserRepository userRepository;
 
+  @Value("${app.params.defaultPassword}")
+  private String defaultPassword;
+
   public UserService(UserRepository userRepository) {
     this.userRepository = userRepository;
   }
@@ -42,10 +52,10 @@ public class UserService {
    *
    * @param login O login do usuário.
    * @return Um Optional contendo o usuário, se encontrado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se o login for nulo ou vazio.
+   * @throws ValidationException se o login for nulo ou vazio.
    */
   public Optional<User> findByLogin(String login) {
-    log.debug("Finding user by login: {}", login);
+    log.debug("Buscando usuário pelo login: {}", login);
     ValidationUtils.hasText(login, "Login obrigatório");
     return userRepository.findByLogin(login);
   }
@@ -53,19 +63,20 @@ public class UserService {
   /**
    * Realiza o login do usuário verificando as credenciais e o status.
    *
-   * @param login O login do usuário.
+   * @param login    O login do usuário.
    * @param password A senha do usuário.
    * @return Um DTO com as informações do usuário autenticado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se o login ou senha forem nulos ou vazios.
+   * @throws ValidationException se o login ou senha forem nulos ou vazios.
    * @throws BadCredentialsException se o usuário não for encontrado, ou a senha estiver incorreta.
    * @throws BlockedUserException se o usuário estiver com status BLOCKED.
    */
   public UserDto login(String login, String password) {
-    log.debug("Attempting login for user: {}", login);
+    log.debug("Iniciando rotina de login para o usuário: {}", login);
     ValidationUtils.hasText(login, "Login obrigatório");
     ValidationUtils.hasText(password, "Senha obrigatória");
 
-    User user = userRepository.findByLogin(login).orElseThrow(() -> new BadCredentialsException(INVALID_CREDENTIALS_MSG));
+    User user = userRepository.findByLogin(login)
+        .orElseThrow(() -> new BadCredentialsException(INVALID_CREDENTIALS_MSG));
 
     String encryptedPassword = CryptUtils.encrypt(password);
     if (!user.getPassword().equals(encryptedPassword)) {
@@ -77,31 +88,32 @@ public class UserService {
     }
 
     return UserDto.builder()
-                  .id(user.getId())
-                  .login(user.getLogin())
-                  .name(user.getName())
-                  .type(user.getType().name())
-                  .changePwdOnLogin(user.getChangePwdOnLogin())
-                  .build();
+        .id(user.getId())
+        .login(user.getLogin())
+        .name(user.getName())
+        .type(user.getType().name())
+        .changePwdOnLogin(user.getChangePwdOnLogin())
+        .build();
   }
 
   /**
    * Altera a senha do usuário.
    *
-   * @param userId O ID do usuário.
+   * @param userId      O ID do usuário.
    * @param oldPassword A senha atual.
    * @param newPassword A nova senha desejada.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se as senhas não forem fornecidas.
+   * @throws ValidationException se as senhas não forem fornecidas.
    * @throws BusinessException se o usuário não for encontrado.
    * @throws BadCredentialsException se a senha atual informada estiver incorreta.
    * @throws InvalidNewPasswordDataException se a nova senha não obedecer aos critérios de segurança.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public void changePassword(Long userId, String oldPassword, String newPassword) {
+    log.debug("Iniciando troca de senha para o usuário ID: {}", userId);
     ValidationUtils.hasText(oldPassword, "Senha atual é obrigatória");
     ValidationUtils.hasText(newPassword, "Nova senha é obrigatória");
 
-    User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
 
     String encryptedOldPassword = CryptUtils.encrypt(oldPassword);
     if (!user.getPassword().equals(encryptedOldPassword)) {
@@ -116,23 +128,23 @@ public class UserService {
   }
 
   private void validateNewPassword(String password) {
-    // Minimum 8 characters
+    // Mínimo de 8 caracteres
     if (password.length() < 8) {
       throw new InvalidNewPasswordDataException("A senha deve ter no mínimo 8 caracteres");
     }
-    // At least one uppercase letter
+    // Pelo menos uma letra maiúscula
     if (!password.matches(".*[A-Z].*")) {
       throw new InvalidNewPasswordDataException("A senha deve conter ao menos uma letra maiúscula");
     }
-    // At least one lowercase letter
+    // Pelo menos uma letra minúscula
     if (!password.matches(".*[a-z].*")) {
       throw new InvalidNewPasswordDataException("A senha deve conter ao menos uma letra minúscula");
     }
-    // At least one number
+    // Pelo menos um número
     if (!password.matches(".*[0-9].*")) {
       throw new InvalidNewPasswordDataException("A senha deve conter ao menos um número");
     }
-    // At least one symbol (non-alphanumeric)
+    // Pelo menos um caractere especial (símbolo não alfanumérico)
     if (!password.matches(".*[^a-zA-Z0-9].*")) {
       throw new InvalidNewPasswordDataException("A senha deve conter ao menos um símbolo");
     }
@@ -146,7 +158,7 @@ public class UserService {
    * @return Uma página de usuários em formato DTO.
    */
   public Page<UserDto> findAll(List<UserStatus> statuses, Pageable pageable) {
-    log.debug("Finding all users with statuses: {}", statuses);
+    log.debug("Buscando todos os usuários filtrados pelos status: {}", statuses);
     Specification<User> spec = (root, query, cb) -> {
       if (statuses != null && !statuses.isEmpty()) {
         return cb.and(root.get("status").in(statuses), cb.notEqual(root.get("type"), UserType.MASTER));
@@ -155,14 +167,14 @@ public class UserService {
     };
 
     return userRepository.findAll(spec, pageable)
-                         .map(user -> UserDto.builder()
-                                             .id(user.getId())
-                                             .login(user.getLogin())
-                                             .name(user.getName())
-                                             .type(user.getType().name())
-                                             .changePwdOnLogin(user.getChangePwdOnLogin())
-                                             .status(user.getStatus().name())
-                                             .build());
+        .map(user -> UserDto.builder()
+            .id(user.getId())
+            .login(user.getLogin())
+            .name(user.getName())
+            .type(user.getType().name())
+            .changePwdOnLogin(user.getChangePwdOnLogin())
+            .status(user.getStatus().name())
+            .build());
   }
 
   /**
@@ -170,76 +182,76 @@ public class UserService {
    *
    * @param userDto DTO contendo os dados do usuário a ser criado.
    * @return O DTO do usuário criado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se algum campo obrigatório não estiver preenchido.
+   * @throws ValidationException se algum campo obrigatório não estiver preenchido.
    * @throws BusinessException se o login já existir ou se o tipo de usuário for MASTER.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public UserDto create(UserDto userDto) {
-    log.debug("Creating user: {}", userDto.getLogin());
+    log.debug("Iniciando criação de novo usuário: {}", userDto != null ? userDto.getLogin() : null);
     ValidationUtils.notNull(userDto, "Objeto usuário obrigatório");
     ValidationUtils.hasText(userDto.getLogin(), "Login obrigatório");
     ValidationUtils.hasText(userDto.getName(), "Nome obrigatório");
     ValidationUtils.hasText(userDto.getType(), "Tipo obrigatório");
 
     userRepository.findByLogin(userDto.getLogin()).ifPresent(u -> {
-      throw new BusinessException("Login já existe");
+      throw new LoginAlreadyExistsException("Login já existe");
     });
 
     if (UserType.MASTER.name().equals(userDto.getType())) {
-      throw new BusinessException("Não é permitido criar usuário MASTER");
+      throw new MasterUserNotAllowedException("Não é permitido criar usuário MASTER");
     }
 
-    String password = StringUtils.isNotBlank(userDto.getPassword()) ? userDto.getPassword() : "MyFinances@123";
+    String password = StringUtils.isNotBlank(userDto.getPassword()) ? userDto.getPassword() : defaultPassword;
 
     User user = User.builder()
-                    .login(userDto.getLogin())
-                    .name(userDto.getName())
-                    .password(CryptUtils.encrypt(password))
-                    .status(UserStatus.ACTIVE)
-                    .type(UserType.valueOf(userDto.getType()))
-                    .changePwdOnLogin(true)
-                    .build();
+        .login(userDto.getLogin())
+        .name(userDto.getName())
+        .password(CryptUtils.encrypt(password))
+        .status(UserStatus.ACTIVE)
+        .type(UserType.valueOf(userDto.getType()))
+        .changePwdOnLogin(true)
+        .build();
 
     user = userRepository.save(user);
 
     return UserDto.builder()
-                  .id(user.getId())
-                  .login(user.getLogin())
-                  .name(user.getName())
-                  .type(user.getType().name())
-                  .changePwdOnLogin(user.getChangePwdOnLogin())
-                  .status(user.getStatus().name())
-                  .build();
+        .id(user.getId())
+        .login(user.getLogin())
+        .name(user.getName())
+        .type(user.getType().name())
+        .changePwdOnLogin(user.getChangePwdOnLogin())
+        .status(user.getStatus().name())
+        .build();
   }
 
   /**
    * Atualiza os dados de um usuário existente.
    *
-   * @param id ID do usuário.
+   * @param id      ID do usuário.
    * @param userDto Novos dados do usuário.
    * @return O DTO do usuário atualizado.
-   * @throws br.com.infotech.myfinances.exception.ValidationException se os dados dforem inválidos.
+   * @throws ValidationException se os dados forem inválidos.
    * @throws BusinessException se o login já existir, se o usuário não for encontrado ou se houver tentativa de mudar para MASTER.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public UserDto update(Long id, UserDto userDto) {
-    log.debug("Updating user with ID: {}", id);
+    log.debug("Iniciando atualização do usuário com ID: {}", id);
     ValidationUtils.notNull(userDto, "Objeto usuário obrigatório");
     ValidationUtils.hasText(userDto.getLogin(), "Login obrigatório");
     ValidationUtils.hasText(userDto.getName(), "Nome obrigatório");
     ValidationUtils.hasText(userDto.getType(), "Tipo obrigatório");
 
-    User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
 
     if (!user.getLogin().equals(userDto.getLogin())) {
       userRepository.findByLogin(userDto.getLogin()).ifPresent(u -> {
-        throw new BusinessException("Login já existe");
+        throw new LoginAlreadyExistsException("Login já existe");
       });
       user.setLogin(userDto.getLogin());
     }
 
     if (UserType.MASTER.name().equals(userDto.getType())) {
-      throw new BusinessException("Não é permitido alterar para tipo MASTER");
+      throw new MasterUserNotAllowedException("Não é permitido alterar para tipo MASTER");
     }
 
     user.setName(userDto.getName());
@@ -253,26 +265,27 @@ public class UserService {
     user = userRepository.save(user);
 
     return UserDto.builder()
-                  .id(user.getId())
-                  .login(user.getLogin())
-                  .name(user.getName())
-                  .type(user.getType().name())
-                  .changePwdOnLogin(user.getChangePwdOnLogin())
-                  .status(user.getStatus().name())
-                  .build();
+        .id(user.getId())
+        .login(user.getLogin())
+        .name(user.getName())
+        .type(user.getType().name())
+        .changePwdOnLogin(user.getChangePwdOnLogin())
+        .status(user.getStatus().name())
+        .build();
   }
 
   /**
    * Altera o status de um usuário.
    *
-   * @param id ID do usuário.
+   * @param id     ID do usuário.
    * @param status Novo status.
    * @throws BusinessException se o usuário não for encontrado.
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public void changeStatus(Long id, UserStatus status) {
+    log.debug("Iniciando alteração de status para o usuário ID: {} para o status: {}", id, status);
     ValidationUtils.notNull(status, "Status obrigatório");
-    User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
 
     user.setStatus(status);
     userRepository.save(user);
@@ -285,9 +298,9 @@ public class UserService {
    * @throws BusinessException se não houver usuário autenticado no contexto.
    */
   public User getCurrentUser() {
-    User user = br.com.infotech.myfinances.context.UserContext.getCurrentUser();
+    User user = UserContext.getCurrentUser();
     if (user == null) {
-      throw new BusinessException("Usuário não autenticado no contexto.");
+      throw new UserNotAuthenticatedException("Usuário não autenticado no contexto.");
     }
     return user;
   }

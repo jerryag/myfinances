@@ -13,6 +13,8 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import br.com.infotech.myfinances.domain.MdcKey;
+import br.com.infotech.myfinances.util.MdcUtils;
 
 @RestControllerAdvice
 @Slf4j
@@ -20,49 +22,51 @@ public class GlobalExceptionAdvice extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(BadCredentialsException.class)
   public ProblemDetail handleBadCredentials(BadCredentialsException ex) {
-    log.warn("Bad credentials: {}", ex.getMessage());
+    log.debug("Bad credentials: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
 
   @ExceptionHandler(BlockedUserException.class)
   public ProblemDetail handleBlockedUser(BlockedUserException ex) {
-    log.warn("Blocked user warning: {}", ex.getMessage());
+    log.debug("Blocked user warning: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
   }
 
   @ExceptionHandler(ValidationException.class)
   public ProblemDetail handleValidation(ValidationException ex) {
-    log.warn("Validation error: {}", ex.getMessage());
+    log.debug("Validation error: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(InvalidNewPasswordDataException.class)
   public ProblemDetail handleInvalidNewPasswordDataException(InvalidNewPasswordDataException ex) {
-    log.warn("Invalid password data: {}", ex.getMessage());
+    log.debug("Invalid password data: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
-    log.warn("Illegal argument: {}", ex.getMessage());
+    log.debug("Illegal argument: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(EntityNotFoundException.class)
   public ProblemDetail handleEntityNotFound(EntityNotFoundException ex) {
-    log.warn("Entity not found: {}", ex.getMessage());
+    log.debug("Entity not found: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
   }
 
   @ExceptionHandler(BusinessException.class)
   public ProblemDetail handleBusiness(BusinessException ex) {
-    log.warn("Business exception: {}", ex.getMessage());
+    log.debug("Business exception: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
   }
 
   @ExceptionHandler(InfrastructureException.class)
   public ProblemDetail handleInfrastructure(InfrastructureException ex) {
-    log.error("Infrastructure exception: ", ex);
+    String traceId = MdcUtils.get(MdcKey.TRACE_ID);
+    String userId = MdcUtils.get(MdcKey.USER_LOGIN);
+    log.error("Infrastructure exception [TraceID: {}, UserID: {}]: ", traceId, userId, ex);
     return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An internal system error occurred.");
   }
 }

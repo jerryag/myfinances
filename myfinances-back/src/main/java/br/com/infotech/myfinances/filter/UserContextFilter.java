@@ -14,6 +14,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
+import br.com.infotech.myfinances.util.MdcUtils;
+import br.com.infotech.myfinances.domain.MdcKey;
 
 @Component
 @RequiredArgsConstructor
@@ -27,27 +29,25 @@ public class UserContextFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
 
     String userLogin = request.getHeader("X-User-Login");
-    log.info("Processing request: {} {}. User Login Header: {}", request.getMethod(), request.getRequestURI(), userLogin);
+
+    // Injeta TraceId e UserLogin na memória MDC do logback atual
+    MdcUtils.defineTraceId();
+    MdcUtils.set(MdcKey.USER_LOGIN, StringUtils.isNotBlank(userLogin) ? userLogin : "-");
 
     if (StringUtils.isNotBlank(userLogin)) {
       Optional<User> userOptional = userRepository.findByLogin(userLogin);
       if (userOptional.isPresent()) {
         UserContext.setCurrentUser(userOptional.get());
-        log.info("User context set for login: {}", userLogin);
-      } else {
-        log.warn("User not found for login: {}", userLogin);
       }
-    } else {
-      log.info("No X-User-Login header found");
     }
 
     try {
       filterChain.doFilter(request, response);
     } catch (Exception e) {
-      log.error("Error in filter chain", e);
-      throw e;
+      throw e; // Lançar limpo: Advices tratarão
     } finally {
       UserContext.clear();
+      MdcUtils.clear();
     }
   }
 }

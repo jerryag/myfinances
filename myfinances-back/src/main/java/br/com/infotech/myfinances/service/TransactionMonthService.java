@@ -7,6 +7,7 @@ import br.com.infotech.myfinances.repository.TransactionMonthRepository;
 import br.com.infotech.myfinances.repository.TransactionRepository;
 import br.com.infotech.myfinances.repository.TransactionTypeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Propagation;
+import br.com.infotech.myfinances.exception.TransactionMonthNotFoundException;
+import br.com.infotech.myfinances.exception.TransactionNotFoundException;
+import br.com.infotech.myfinances.exception.TransactionTypeNotFoundException;
 import br.com.infotech.myfinances.exception.BusinessException;
 import br.com.infotech.myfinances.util.ValidationUtils;
 import br.com.infotech.myfinances.domain.TransactionTypeType;
@@ -25,6 +29,7 @@ import br.com.infotech.myfinances.domain.TransactionTypeType;
 @Service
 @Transactional(propagation = Propagation.SUPPORTS)
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionMonthService {
 
   private final TransactionMonthRepository transactionMonthRepository;
@@ -41,6 +46,7 @@ public class TransactionMonthService {
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionMonthDto getOrCreateMonth(Integer month, Integer year) {
+    log.debug("Recuperando ou criando a planilha do mês: {}/{}", month, year);
     User currentUser = userService.getCurrentUser();
 
     return transactionMonthRepository.findByUserAndMonthAndYear(currentUser, month, year)
@@ -53,7 +59,7 @@ public class TransactionMonthService {
 
     TransactionMonth savedMonth = transactionMonthRepository.save(newMonth);
 
-    // Auto-generate recurring transactions
+    // Gera automaticamente as transações recorrentes
     List<TransactionType> recurringTypes = transactionTypeRepository.findAll()
                                                                     .stream()
                                                                     .filter(t -> t.getUser().getId().equals(user.getId())
@@ -64,11 +70,11 @@ public class TransactionMonthService {
     List<Transaction> initialTransactions = new ArrayList<>();
     for (TransactionType type : recurringTypes) {
 
-      // Logic for Recurring Date
-      // Default to type's default day, or 1 if not set
+      // Lógica para Data Recorrente
+      // Usa o dia padrão do tipo de transação, ou 1 se não estiver definido
       int dayToUse = type.getDefaultDay() != null ? type.getDefaultDay() : 1;
 
-      // Ensure day is valid for this month
+      // Garante que o dia seja válido para este mês
       int maxDayInNewMonth = LocalDate.of(year, month, 1).lengthOfMonth();
       if (dayToUse > maxDayInNewMonth) {
         dayToUse = maxDayInNewMonth;
@@ -102,12 +108,13 @@ public class TransactionMonthService {
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionMonthDto updateInitialBalance(Long id, BigDecimal initialBalance) {
+    log.debug("Iniciando atualização de saldo inicial para o mês ID: {}", id);
     ValidationUtils.notNull(id, "ID do mês obrigatório");
     ValidationUtils.notNull(initialBalance, "Saldo inicial obrigatório");
 
-    TransactionMonth transactionMonth = transactionMonthRepository.findById(id).orElseThrow(() -> new BusinessException("Mês não encontrado"));
+    TransactionMonth transactionMonth = transactionMonthRepository.findById(id).orElseThrow(() -> new TransactionMonthNotFoundException("Mês não encontrado"));
 
-    // Optimize: Check user ownership
+    // Otimização: Validar se o usuário é o dono
 
     transactionMonth.setInitialBalance(initialBalance);
     return toDto(transactionMonthRepository.save(transactionMonth));
@@ -122,16 +129,17 @@ public class TransactionMonthService {
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionMonthDto addTransaction(Long monthId, TransactionDto dto) {
+    log.debug("Adicionando nova transação ao mês ID: {}", monthId);
     ValidationUtils.notNull(monthId, "ID do mês é obrigatório");
     ValidationUtils.notNull(dto, "A transação é obrigatória");
     ValidationUtils.notNull(dto.getTransactionTypeId(), "O tipo de transação é obrigatório");
     ValidationUtils.notNull(dto.getDay(), "O dia é obrigatório");
     ValidationUtils.notNull(dto.getAmount(), "O valor é obrigatório");
 
-    TransactionMonth month = transactionMonthRepository.findById(monthId).orElseThrow(() -> new BusinessException("Mês não encontrado"));
+    TransactionMonth month = transactionMonthRepository.findById(monthId).orElseThrow(() -> new TransactionMonthNotFoundException("Mês não encontrado"));
 
     TransactionType type = transactionTypeRepository.findById(dto.getTransactionTypeId())
-                                                    .orElseThrow(() -> new BusinessException("Tipo de Transação não encontrado"));
+                                                    .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
 
     Transaction transaction = Transaction.builder()
                                          .user(month.getUser())
@@ -158,18 +166,19 @@ public class TransactionMonthService {
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionMonthDto updateTransaction(Long transactionId, TransactionDto dto) {
+    log.debug("Atualizando transação ID: {}", transactionId);
     ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
     ValidationUtils.notNull(dto, "A transação é obrigatória");
     ValidationUtils.notNull(dto.getTransactionTypeId(), "O tipo de transação é obrigatório");
     ValidationUtils.notNull(dto.getDay(), "O dia é obrigatório");
     ValidationUtils.notNull(dto.getAmount(), "O valor é obrigatório");
 
-    Transaction transaction = transactionRepository.findById(transactionId).orElseThrow(() -> new BusinessException("Transação não encontrada"));
+    Transaction transaction = transactionRepository.findById(transactionId).orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
     TransactionType type = transactionTypeRepository.findById(dto.getTransactionTypeId())
-                                                    .orElseThrow(() -> new BusinessException("Tipo de Transação não encontrado"));
+                                                    .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
 
-    // Update fields
+    // Atualiza os campos
     transaction.setTransactionType(type);
     transaction.setTransactionDate(LocalDate.of(transaction.getTransactionMonth().getYear(), transaction.getTransactionMonth()
                                                                                                         .getMonth(), dto.getDay()));
@@ -191,8 +200,9 @@ public class TransactionMonthService {
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionMonthDto deleteTransaction(Long transactionId) {
+    log.debug("Iniciando exclusão da transação ID: {}", transactionId);
     ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
-    Transaction transaction = transactionRepository.findById(transactionId).orElseThrow(() -> new BusinessException("Transação não encontrada"));
+    Transaction transaction = transactionRepository.findById(transactionId).orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
     TransactionMonth month = transaction.getTransactionMonth();
     transactionRepository.delete(transaction);
@@ -208,38 +218,38 @@ public class TransactionMonthService {
    * @return O valor da última transação, ou ZERO.
    */
   public BigDecimal getLastTransactionValue(Long transactionTypeId, String description) {
+    log.debug("Buscando último valor registrado para a transação tipo ID: {} e descrição: [{}]", transactionTypeId, description);
     ValidationUtils.notNull(transactionTypeId, "O ID do tipo de transação é obrigatório");
     User currentUser = userService.getCurrentUser();
     TransactionType type = transactionTypeRepository.findById(transactionTypeId)
-                                                    .orElseThrow(() -> new BusinessException("Tipo de Transação não encontrado"));
+                                                    .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
 
     Optional<Transaction> transaction = Optional.empty();
 
-    // 1. Try with Exact Description
+    // 1. Tenta buscar com a Descrição exata
     if (description != null && !description.trim().isEmpty()) {
       transaction = transactionRepository.findFirstByUserAndTransactionTypeAndDescriptionAndAmountGreaterThanOrderByTransactionDateDesc(currentUser, type, description.trim(), BigDecimal.ZERO);
     }
 
-    // 2. Fallback to just Type
+    // 2. Fallback buscando apenas pelo Tipo
     if (transaction.isEmpty()) {
       transaction = transactionRepository.findFirstByUserAndTransactionTypeAndAmountGreaterThanOrderByTransactionDateDesc(currentUser, type, BigDecimal.ZERO);
     }
 
     return transaction.map(Transaction::getAmount).orElse(BigDecimal.ZERO);
   }
-  // TODO: Add Transaction CRUD methods here (add, update, delete transaction
-  // line)
+  // TODO: Adicionar métodos de CRUD de Transações aqui (adicionar, atualizar, deletar linha de transação)
 
   private TransactionMonthDto toDto(TransactionMonth entity) {
     List<Transaction> transactions = transactionRepository.findByTransactionMonthOrderByTransactionDateAsc(entity);
 
-    // Custom Sort: Day ASC (already from DB), then Type (Income before Expense)
+    // Ordenação Customizada: Dia ASC (já vem do banco), depois Tipo (Receita antes de Despesa)
     transactions.sort((t1, t2) -> {
       int dateCompare = t1.getTransactionDate().compareTo(t2.getTransactionDate());
       if (dateCompare != 0)
         return dateCompare;
 
-      // If same date, INCOME comes before EXPENSE
+      // Em dias idênticos, a RECEITA tem prioridade sobre a DESPESA
       boolean t1IsIncome = t1.getTransactionType().getType() == TransactionTypeType.INCOME;
       boolean t2IsIncome = t2.getTransactionType().getType() == TransactionTypeType.INCOME;
 
@@ -248,7 +258,7 @@ public class TransactionMonthService {
       if (!t1IsIncome && t2IsIncome)
         return 1;
 
-      // Tie-breaker 3: Amount (ASC)
+      // Desempate 3: Valor (Crescente)
       return t1.getAmount().compareTo(t2.getAmount());
     });
 

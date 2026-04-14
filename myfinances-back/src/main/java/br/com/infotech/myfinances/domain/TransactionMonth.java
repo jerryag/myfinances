@@ -31,7 +31,7 @@ public class TransactionMonth {
   private Integer year;
 
   @Column(nullable = false)
-  private String status; // OPEN, CLOSED
+  private String status; // Valores aceitos: OPEN, CLOSED
 
   @Column(name = "initial_balance", nullable = false)
   private BigDecimal initialBalance;

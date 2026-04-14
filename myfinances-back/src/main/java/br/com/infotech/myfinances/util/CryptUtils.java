@@ -3,6 +3,7 @@ package br.com.infotech.myfinances.util;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import br.com.infotech.myfinances.exception.InfrastructureException;
 
 /**
  * Utilitário para criptografia (hashing) de strings.
@@ -18,7 +19,7 @@ public class CryptUtils {
    *
    * @param value A string a ser criptografada.
    * @return A string criptografada em formato hexadecimal.
-   * @throws br.com.infotech.myfinances.exception.InfrastructureException caso o algoritmo SHA-256 não seja encontrado em {@link MessageDigest}.
+   * @throws InfrastructureException caso o algoritmo SHA-256 não seja encontrado em {@link MessageDigest}.
    */
   public static String encrypt(String value) {
     if (value == null) {
@@ -29,7 +30,7 @@ public class CryptUtils {
       byte[] encodedhash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
       return bytesToHex(encodedhash);
     } catch (NoSuchAlgorithmException e) {
-      throw new br.com.infotech.myfinances.exception.InfrastructureException("Erro ao criptografar string: algoritmo SHA-256 não encontrado", e);
+      throw new InfrastructureException("Erro ao criptografar string: algoritmo SHA-256 não encontrado", e);
     }
   }
 
