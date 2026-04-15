@@ -18,7 +18,6 @@ import java.util.List;
 
 import org.springframework.transaction.annotation.Propagation;
 import br.com.infotech.myfinances.exception.TransactionTypeChangeTypeException;
-import br.com.infotech.myfinances.exception.BusinessException;
 import br.com.infotech.myfinances.exception.ValidationException;
 import br.com.infotech.myfinances.util.ValidationUtils;
 
@@ -57,7 +56,7 @@ public class TransactionTypeService {
    *
    * @param id ID do tipo de transação.
    * @return O tipo de transação em formato DTO.
-   * @throws ValidationException se o ID não for informado.
+   * @throws ValidationException     se o ID não for informado.
    * @throws EntityNotFoundException se não for encontrado.
    */
   public TransactionTypeDto findById(Long id) {
@@ -99,8 +98,11 @@ public class TransactionTypeService {
    * @param id  ID do tipo a atualizar.
    * @param dto Novos dados para o tipo de transação.
    * @return O tipo atualizado.
-   * @throws ValidationException se id ou dto forem nulos, ou faltando informações obrigatórias.
-   * @throws TransactionTypeChangeTypeException se houver tentativa de alteração do tipo fundamental (INCOME/EXPENSE).
+   * @throws ValidationException                se id ou dto forem nulos, ou
+   *                                            faltando informações obrigatórias.
+   * @throws TransactionTypeChangeTypeException se houver tentativa de alteração
+   *                                            do tipo fundamental
+   *                                            (INCOME/EXPENSE).
    */
   @Transactional(propagation = Propagation.REQUIRED)
   public TransactionTypeDto update(Long id, TransactionTypeDto dto) {
@@ -111,7 +113,7 @@ public class TransactionTypeService {
 
     TransactionType entity = findByIdOrThrow(id);
 
-    // Algumas regras negociais: não altera o tipo
+    // Regra de negócio: não é permitido alterar o tipo
     if (dto.getType() != null && !dto.getType().equals(entity.getType())) {
       throw new TransactionTypeChangeTypeException("O tipo de transação não pode ser alterado.");
     }
@@ -151,7 +153,8 @@ public class TransactionTypeService {
    * Retorna os tipos de transação recorrentes e ativos de um determinado usuário.
    *
    * @param user O usuário dono dos tipos de transação.
-   * @return Lista de {@link TransactionType} recorrentes e com status {@link TransactionTypeStatus#ACTIVE}.
+   * @return Lista de {@link TransactionType} recorrentes e com status
+   *         {@link TransactionTypeStatus#ACTIVE}.
    */
   public List<TransactionType> findRecurringActiveByUser(User user) {
     return transactionTypeRepository.findByUserAndStatusAndRecurringTrue(user, TransactionTypeStatus.ACTIVE);

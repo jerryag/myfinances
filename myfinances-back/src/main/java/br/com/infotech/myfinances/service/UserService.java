@@ -1,5 +1,6 @@
 package br.com.infotech.myfinances.service;
 
+import br.com.infotech.myfinances.domain.MdcKey;
 import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.domain.UserStatus;
 import br.com.infotech.myfinances.domain.UserType;
@@ -9,6 +10,8 @@ import br.com.infotech.myfinances.exception.BlockedUserException;
 import br.com.infotech.myfinances.exception.InvalidNewPasswordDataException;
 import br.com.infotech.myfinances.repository.UserRepository;
 import br.com.infotech.myfinances.util.CryptUtils;
+import br.com.infotech.myfinances.util.MdcUtils;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -71,6 +74,8 @@ public class UserService {
    * @throws BlockedUserException    se o usuário estiver com status BLOCKED.
    */
   public UserDto login(String login, String password) {
+    MdcUtils.defineTraceId();
+
     log.debug("Iniciando rotina de login para o usuário: {}", login);
     ValidationUtils.hasText(login, "Login obrigatório");
     ValidationUtils.hasText(password, "Senha obrigatória");
@@ -86,6 +91,11 @@ public class UserService {
     if (UserStatus.BLOCKED.equals(user.getStatus())) {
       throw new BlockedUserException("Usuário bloqueado");
     }
+
+    MdcUtils.set(MdcKey.USER_LOGIN, login);
+
+    // Coloca o usuário logado no contexto ThreadLocal para uso posterior
+    UserContext.setCurrentUser(user);
 
     return UserDto.builder()
         .id(user.getId())

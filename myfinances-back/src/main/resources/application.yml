@@ -25,6 +25,9 @@ spring:
 app:
   params:
     defaultPassword: "MyFinances@123"
+  jwt:
+    secret: "myfinances-jwt-session-secret-key"
+    expiration-minutes: 3
 
 logging:
   level:

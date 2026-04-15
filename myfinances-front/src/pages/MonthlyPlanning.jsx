@@ -850,7 +850,7 @@ export function MonthlyPlanning() {
                     </tbody>
                     <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 1, backgroundColor: '#2a2a2a', boxShadow: '0 -2px 5px rgba(0,0,0,0.5)', color: '#fff' }}>
                         <tr>
-                            <td colSpan="9" style={{ padding: '10px 15px', borderTop: '1px solid #333' }}>
+                            <td colSpan="10" style={{ padding: '10px 15px', borderTop: '1px solid #333' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         {(!filters.day && filters.types.length === 0) && (

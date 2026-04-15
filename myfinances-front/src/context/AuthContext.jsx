@@ -21,15 +21,18 @@ export const AuthProvider = ({ children }) => {
         params.append('password', password);
 
         const response = await api.post('/login', params);
-        const userData = response.data;
+        const { token, ...userData } = response.data;
 
         localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('sessionToken', token);
+        
         setUser(userData);
         return userData;
     };
 
     const logout = () => {
         localStorage.removeItem('user');
+        localStorage.removeItem('sessionToken');
         setUser(null);
     };
 

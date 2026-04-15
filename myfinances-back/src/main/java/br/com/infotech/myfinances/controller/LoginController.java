@@ -1,6 +1,8 @@
 package br.com.infotech.myfinances.controller;
 
+import br.com.infotech.myfinances.dto.LoginResponseDto;
 import br.com.infotech.myfinances.dto.UserDto;
+import br.com.infotech.myfinances.service.JwtSessionService;
 import br.com.infotech.myfinances.service.UserService;
 import br.com.infotech.myfinances.controller.api.ILoginController;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +19,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoginController implements ILoginController {
 
   private final UserService userService;
+  private final JwtSessionService jwtSessionService;
 
   @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
   @Override
-  public ResponseEntity<UserDto> login(@RequestParam("login") String login, @RequestParam("password") String password) {
+  public ResponseEntity<LoginResponseDto> login(@RequestParam("login") String login,
+      @RequestParam("password") String password) {
 
     UserDto userDto = userService.login(login, password);
-    return ResponseEntity.ok(userDto);
+    String token = jwtSessionService.generateSessionToken(userDto.getLogin(),
+        jwtSessionService.getJwtId(userDto.getId()));
+
+    LoginResponseDto response = LoginResponseDto.builder()
+        .token(token)
+        .id(userDto.getId())
+        .login(userDto.getLogin())
+        .name(userDto.getName())
+        .type(userDto.getType())
+        .changePwdOnLogin(userDto.getChangePwdOnLogin())
+        .build();
+
+    return ResponseEntity.ok(response);
   }
 }
