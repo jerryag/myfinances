@@ -11,6 +11,7 @@ import br.com.infotech.myfinances.exception.InvalidNewPasswordDataException;
 import br.com.infotech.myfinances.repository.UserRepository;
 import br.com.infotech.myfinances.util.CryptUtils;
 import br.com.infotech.myfinances.util.MdcUtils;
+import org.springframework.cache.annotation.Cacheable;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -57,7 +58,9 @@ public class UserService {
    * @return Um Optional contendo o usuário, se encontrado.
    * @throws ValidationException se o login for nulo ou vazio.
    */
+  @Cacheable(value = "users", key = "#login")
   public Optional<User> findByLogin(String login) {
+    log.debug("Buscando usuário pelo login '{}' no repositório", login);
     ValidationUtils.hasText(login, "Login obrigatório");
     return userRepository.findByLogin(login);
   }

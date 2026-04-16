@@ -92,8 +92,6 @@
 - Proibido criar métodos ou construtores que recebam mais que 5 parâmetros. Se isso acontecer, criar uma classe para representar os parâmetros.
 - Toda vez que uma classe for refatorada, verificar se não sobrou algum import desnecessário.
 - Toda vez que uma classe for refatorada e a mesma possuir testes unitários, atualizar os testes unitários para refletirem o novo comportamento.
-- Sempre que fizer alterações que afetam mais que 50 linhas de código ou mais que 3 arquivos `.java`, executar um mvn compile para verificar se está compilando sem erros.
-
 
 # React e NodeJS Engineering Conventions
 

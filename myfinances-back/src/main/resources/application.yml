@@ -28,6 +28,14 @@ app:
   jwt:
     secret: "myfinances-jwt-session-secret-key"
     expiration-minutes: 3
+  cache:
+    configs:
+      users:
+        expire-after-write-minutes: 10
+        maximum-size: 10
+      transaction-types:
+        expire-after-write-minutes: 10
+        maximum-size: 50
 
 logging:
   level:

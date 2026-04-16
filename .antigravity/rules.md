@@ -12,3 +12,4 @@
 - Todo código gerado deve ser aderente às políticas do **Sonar**.
 - Respeite rigorosamente as boas práticas de segurança **SAST Snyk**.
 - O agente deve validar proativamente se o código fere qualquer uma dessas políticas antes de apresentar a solução.
+- Sempre que fizer alterações que afetam mais que 50 linhas de código ou mais que 3 arquivos `.java`, executar um mvn compile para verificar se está compilando sem erros.

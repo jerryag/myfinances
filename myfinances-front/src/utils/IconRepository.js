@@ -31,9 +31,10 @@ export const ICON_GROUPS = {
         'FaMoneyBillWave', 'FaHandHoldingUsd', 'FaPiggyBank', 'FaWallet', 'FaChartLine',
         'FaCoins', 'MdAttachMoney', 'MdTrendingUp'
     ],
-    'Saúde': [
-        'FaHeartbeat', 'FaFirstAid', 'FaPills', 'FaUserMd', 'FaStethoscope',
-        'FaTooth', 'FaBrain', 'FaSyringe', 'FaHospital', 'MdHealthAndSafety'
+    'Saúde e Beleza': [
+        'FaHeartbeat', 'FaFirstAid', 'FaPills', 'FaUserMd', 'FaStethoscope', 'FaGlasses',
+        'FaTooth', 'FaBrain', 'FaSyringe', 'FaHospital', 'MdHealthAndSafety', 'FaAirFreshener',
+        'FaSpa', 'FaMagic', 'MdFace', 'MdFace2', 'IoDiamondSharp', 'GiLipstick', 'GiDelicatePerfume'
     ],
     'Serviços': [
         'FaAmazon', 'FaGoogle', 'FaAws', 'FaGithub', 'SiNetflix', 'FaYoutube', 'FaSpotify',

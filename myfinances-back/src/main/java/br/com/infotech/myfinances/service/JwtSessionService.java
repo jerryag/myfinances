@@ -69,9 +69,11 @@ public class JwtSessionService {
   public String generateSessionToken(String login, String jwtId) {
     try {
 
+      // Define tempo de expiração do token JWT
       Instant now = Instant.now();
       Instant expiry = now.plusSeconds(jwtProperties.getExpirationMinutes() * 60L);
 
+      // Define dados do token JWT
       JWTClaimsSet claims = new JWTClaimsSet.Builder()
           .subject(login)
           .jwtID(jwtId)
@@ -79,6 +81,7 @@ public class JwtSessionService {
           .expirationTime(Date.from(expiry))
           .build();
 
+      // Assina o token JWT
       JWSSigner signer = new MACSigner(jwtProperties.getSecret().getBytes());
       SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
       signedJWT.sign(signer);
@@ -86,7 +89,6 @@ public class JwtSessionService {
       log.debug("Token de sessão gerado para o usuário '{}', expira em {} minutos", login,
           jwtProperties.getExpirationMinutes());
       return signedJWT.serialize();
-
     } catch (Exception e) {
       throw new InfrastructureException("Erro ao gerar token de sessão", e);
     }
@@ -135,10 +137,9 @@ public class JwtSessionService {
       // Gera um novo token com tempo de expiração renovado
       String refreshedToken = generateSessionToken(login, checkJwtId);
 
-      log.debug("Token de sessão renovado para o usuário");
       return new SessionClaims(login, refreshedToken);
 
-    } catch (ForbiddenSessionException e) {
+    } catch (ForbiddenSessionException | UserNotFoundException e) {
       throw e;
     } catch (Exception e) {
       throw new InfrastructureException("Erro ao validar sessão do usuário", e);
@@ -152,7 +153,6 @@ public class JwtSessionService {
    * @return jwtId único para o usuário
    */
   public String getJwtId(Long userId) {
-    log.debug("Gerando jwtId para o usuário {} -> {}", userId, Long.reverseBytes(userId));
     return CryptUtils.encrypt("" + Long.reverseBytes(userId));
   }
 }
