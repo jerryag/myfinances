@@ -43,8 +43,8 @@ export function TransactionTypeList() {
             if (filters.types.length === 0) delete params.types;
 
             const response = await api.get('/transaction-types', { params });
-            setTransactionTypes(response.data.content);
-            setTotalPages(response.data.totalPages);
+            setTransactionTypes(response.data.content || []);
+            setTotalPages(response.data.page?.totalPages ?? response.data.totalPages ?? 0);
         } catch (error) {
             console.error('Erro ao buscar tipos de transação:', error);
             setMessageModal({
@@ -219,15 +219,17 @@ export function TransactionTypeList() {
                 {/* Pagination */}
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
                     <button
+                        title="Página Anterior"
                         disabled={page === 0}
                         onClick={() => setPage(p => p - 1)}
                         className="btn-secondary"
                     >
                         Anterior
                     </button>
-                    <span style={{ alignSelf: 'center' }}>Página {page + 1} de {totalPages || 1}</span>
+                    <span style={{ alignSelf: 'center' }}>Página {page + 1} de {Math.max(1, totalPages)}</span>
                     <button
-                        disabled={page >= totalPages - 1}
+                        title="Próxima Página"
+                        disabled={page >= Math.max(0, totalPages - 1)}
                         onClick={() => setPage(p => p + 1)}
                         className="btn-secondary"
                     >

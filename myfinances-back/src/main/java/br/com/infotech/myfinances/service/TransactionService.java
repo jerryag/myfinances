@@ -6,14 +6,12 @@ import br.com.infotech.myfinances.domain.TransactionType;
 import br.com.infotech.myfinances.domain.TransactionTypeType;
 import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.dto.TransactionDto;
-import br.com.infotech.myfinances.dto.TransactionMonthDto;
 import br.com.infotech.myfinances.exception.TransactionMonthNotFoundException;
 import br.com.infotech.myfinances.exception.TransactionNotFoundException;
 import br.com.infotech.myfinances.exception.TransactionTypeNotFoundException;
 import br.com.infotech.myfinances.exception.ValidationException;
 import br.com.infotech.myfinances.repository.TransactionMonthRepository;
 import br.com.infotech.myfinances.repository.TransactionRepository;
-import br.com.infotech.myfinances.repository.TransactionTypeRepository;
 import br.com.infotech.myfinances.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +31,8 @@ import java.util.Optional;
 public class TransactionService {
 
   private final TransactionRepository transactionRepository;
-  private final TransactionTypeRepository transactionTypeRepository;
+  private final TransactionTypeService transactionTypeService;
   private final TransactionMonthRepository transactionMonthRepository;
-  private final TransactionMonthService transactionMonthService;
   private final UserService userService;
 
   /**
@@ -43,7 +40,7 @@ public class TransactionService {
    *
    * @param monthId ID do mês ao qual a transação será adicionada.
    * @param dto     Dados da nova transação.
-   * @return O mês atualizado listando todas as transações.
+   * @return A transação adicionada.
    * @throws ValidationException               se o ID do mês, o DTO, o tipo de
    *                                           transação, o dia ou o valor forem
    *                                           nulos.
@@ -52,7 +49,7 @@ public class TransactionService {
    *                                           encontrado.
    */
   @Transactional(propagation = Propagation.REQUIRED)
-  public TransactionMonthDto addTransaction(Long monthId, TransactionDto dto) {
+  public TransactionDto addTransaction(Long monthId, TransactionDto dto) {
     log.debug("Adicionando nova transação ao mês ID: {}", monthId);
     ValidationUtils.notNull(monthId, "ID do mês é obrigatório");
     ValidationUtils.notNull(dto, "A transação é obrigatória");
@@ -63,12 +60,9 @@ public class TransactionService {
     TransactionMonth month = transactionMonthRepository.findById(monthId)
         .orElseThrow(() -> new TransactionMonthNotFoundException("Mês não encontrado"));
 
-    TransactionType type = transactionTypeRepository.findById(dto.getTransactionTypeId())
-        .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
+    TransactionType type = transactionTypeService.findByIdOrThrow(dto.getTransactionTypeId());
 
-    Transaction transaction = buildTransaction(month, type, dto);
-    transactionRepository.save(transaction);
-    return transactionMonthService.toDto(month);
+    return toDto(transactionRepository.save(buildTransaction(month, type, dto)));
   }
 
   /**
@@ -76,7 +70,7 @@ public class TransactionService {
    *
    * @param transactionId ID da transação a ser atualizada.
    * @param dto           Os novos dados da transação.
-   * @return O mês atualizado contendo a transação modificada.
+   * @return A transação atualizada.
    * @throws ValidationException              se o ID da transação, o DTO, o tipo
    *                                          de transação, o dia ou o valor forem
    *                                          nulos.
@@ -86,7 +80,7 @@ public class TransactionService {
    *                                          encontrado.
    */
   @Transactional(propagation = Propagation.REQUIRED)
-  public TransactionMonthDto updateTransaction(Long transactionId, TransactionDto dto) {
+  public TransactionDto updateTransaction(Long transactionId, TransactionDto dto) {
     log.debug("Atualizando transação ID: {}", transactionId);
     ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
     ValidationUtils.notNull(dto, "A transação é obrigatória");
@@ -97,13 +91,11 @@ public class TransactionService {
     Transaction transaction = transactionRepository.findById(transactionId)
         .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
-    TransactionType type = transactionTypeRepository.findById(dto.getTransactionTypeId())
-        .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
+    TransactionType type = transactionTypeService.findByIdOrThrow(dto.getTransactionTypeId());
 
     applyUpdate(transaction, type, dto);
 
-    transactionRepository.save(transaction);
-    return transactionMonthService.toDto(transaction.getTransactionMonth());
+    return toDto(transactionRepository.save(transaction));
   }
 
   private Transaction buildTransaction(TransactionMonth month, TransactionType type, TransactionDto dto) {
@@ -137,40 +129,41 @@ public class TransactionService {
    * Remove uma transação através de seu ID.
    *
    * @param transactionId O ID da transação a ser removida.
-   * @return O mês atualizado com a transação removida.
    * @throws ValidationException          se o ID da transação for nulo.
    * @throws TransactionNotFoundException se a transação não for encontrada.
    */
   @Transactional(propagation = Propagation.REQUIRED)
-  public TransactionMonthDto deleteTransaction(Long transactionId) {
+  public void deleteTransaction(Long transactionId) {
     log.debug("Iniciando exclusão da transação ID: {}", transactionId);
     ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
 
     Transaction transaction = transactionRepository.findById(transactionId)
         .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
-    TransactionMonth month = transaction.getTransactionMonth();
     transactionRepository.delete(transaction);
-    return transactionMonthService.toDto(month);
   }
 
   /**
-   * Recupera o último valor registrado de uma transação de determinado tipo e descrição.
+   * Recupera o último valor registrado de uma transação de determinado tipo e
+   * descrição.
    * Caso não seja informada descrição, procura apenas pelo tipo.
    *
    * @param transactionTypeId O ID do tipo de transação.
    * @param description       A descrição da transação (opcional).
-   * @return O valor da última transação encontrada, ou {@link BigDecimal#ZERO} se nenhuma for encontrada.
-   * @throws ValidationException              se o ID do tipo de transação for nulo.
-   * @throws TransactionTypeNotFoundException se o tipo de transação não for encontrado.
+   * @return O valor da última transação encontrada, ou {@link BigDecimal#ZERO} se
+   *         nenhuma for encontrada.
+   * @throws ValidationException              se o ID do tipo de transação for
+   *                                          nulo.
+   * @throws TransactionTypeNotFoundException se o tipo de transação não for
+   *                                          encontrado.
    */
   public BigDecimal getLastTransactionValue(Long transactionTypeId, String description) {
-    log.debug("Buscando último valor registrado para a transação tipo ID: {} e descrição: [{}]", transactionTypeId, description);
+    log.debug("Buscando último valor registrado para a transação tipo ID: {} e descrição: [{}]", transactionTypeId,
+        description);
     ValidationUtils.notNull(transactionTypeId, "O ID do tipo de transação é obrigatório");
 
     User currentUser = userService.getCurrentUser();
-    TransactionType type = transactionTypeRepository.findById(transactionTypeId)
-        .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de Transação não encontrado"));
+    TransactionType type = transactionTypeService.findByIdOrThrow(transactionTypeId);
 
     Optional<Transaction> transaction = findLastTransaction(currentUser, type, description);
     return transaction.map(Transaction::getAmount).orElse(BigDecimal.ZERO);
@@ -190,16 +183,33 @@ public class TransactionService {
   }
 
   /**
-   * Retorna as transações de um mês ordenadas por data ascendente, com receitas antes de despesas no mesmo dia
+   * Retorna as transações de um mês ordenadas por data ascendente, com receitas
+   * antes de despesas no mesmo dia
    * e, em caso de empate, por valor crescente.
    *
    * @param month O mês de referência.
-   * @return Lista ordenada de {@link Transaction}.
+   * @return Lista ordenada de {@link TransactionDto}.
    */
-  public List<Transaction> getSortedTransactions(TransactionMonth month) {
+  public List<TransactionDto> getSortedTransactions(TransactionMonth month) {
     List<Transaction> transactions = transactionRepository.findByTransactionMonthOrderByTransactionDateAsc(month);
     transactions.sort(this::compareTransactions);
-    return transactions;
+    return transactions.stream().map(this::toDto).toList();
+  }
+
+  public TransactionDto toDto(Transaction t) {
+    if (t == null) {
+      return null;
+    }
+    return TransactionDto.builder()
+        .id(t.getId())
+        .day(t.getTransactionDate().getDayOfMonth())
+        .transactionTypeId(t.getTransactionType().getId())
+        .description(t.getDescription())
+        .amount(t.getAmount())
+        .status(t.getStatus())
+        .remark(t.getRemark())
+        .iconName(t.getIconName())
+        .build();
   }
 
   private int compareTransactions(Transaction t1, Transaction t2) {

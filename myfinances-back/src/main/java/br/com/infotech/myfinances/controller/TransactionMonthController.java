@@ -29,18 +29,19 @@ public class TransactionMonthController implements ITransactionMonthController {
   }
 
   @Override
-  public ResponseEntity<TransactionMonthDto> addTransaction(Long monthId, TransactionDto dto) {
+  public ResponseEntity<TransactionDto> addTransaction(Long monthId, TransactionDto dto) {
     return ResponseEntity.ok(transactionService.addTransaction(monthId, dto));
   }
 
   @Override
-  public ResponseEntity<TransactionMonthDto> updateTransaction(Long transactionId, TransactionDto dto) {
+  public ResponseEntity<TransactionDto> updateTransaction(Long transactionId, TransactionDto dto) {
     return ResponseEntity.ok(transactionService.updateTransaction(transactionId, dto));
   }
 
   @Override
-  public ResponseEntity<TransactionMonthDto> deleteTransaction(Long transactionId) {
-    return ResponseEntity.ok(transactionService.deleteTransaction(transactionId));
+  public ResponseEntity<Void> deleteTransaction(Long transactionId) {
+    transactionService.deleteTransaction(transactionId);
+    return ResponseEntity.noContent().build();
   }
 
   @Override

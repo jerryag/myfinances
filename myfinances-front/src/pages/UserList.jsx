@@ -55,8 +55,8 @@ export const UserList = () => {
             }
 
             const response = await userService.getAll(params);
-            setUsers(response.data.content);
-            setTotalPages(response.data.totalPages);
+            setUsers(response.data.content || []);
+            setTotalPages(response.data.page?.totalPages ?? response.data.totalPages ?? 0);
         } catch (error) {
             console.error('Erro ao buscar usuários', error);
         } finally {
@@ -134,37 +134,38 @@ export const UserList = () => {
 
             {loading ? <p>Carregando...</p> : (
                 <>
-                    <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: '4px' }}>
+                <div className="card">
+                    <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead style={{ background: '#f5f5f5', color: '#333' }}>
-                                <tr>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Login</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Nome</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Tipo</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Status</th>
-                                    <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Ações</th>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th style={{ padding: '10px' }}>Login</th>
+                                    <th style={{ padding: '10px' }}>Nome</th>
+                                    <th style={{ padding: '10px' }}>Tipo</th>
+                                    <th style={{ padding: '10px' }}>Status</th>
+                                    <th style={{ padding: '10px', width: '100px' }}>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {users.map(user => (
                                     <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '10px 15px' }}>{user.login}</td>
-                                        <td style={{ padding: '10px 15px' }}>{user.name}</td>
-                                        <td style={{ padding: '10px 15px' }}>{
+                                        <td style={{ padding: '10px' }}>{user.login}</td>
+                                        <td style={{ padding: '10px' }}>{user.name}</td>
+                                        <td style={{ padding: '10px' }}>{
                                             {
                                                 'ADMIN': 'Administrador',
                                                 'USER': 'Usuário',
                                                 'MASTER': 'Master'
                                             }[user.type] || user.type
                                         }</td>
-                                        <td style={{ padding: '10px 15px' }}>{
+                                        <td style={{ padding: '10px' }}>{
                                             {
                                                 'ACTIVE': 'Ativo',
                                                 'BLOCKED': 'Bloqueado',
                                                 'DELETED': 'Excluído'
                                             }[user.status || 'ACTIVE'] || user.status
                                         }</td>
-                                        <td style={{ padding: '10px 15px' }}>
+                                        <td style={{ padding: '10px' }}>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 {user.status !== 'DELETED' && (
                                                     <button
@@ -215,35 +216,24 @@ export const UserList = () => {
                     </div>
                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
                         <button
+                            title="Página Anterior"
                             disabled={page === 0}
-                            onClick={() => setPage(page - 1)}
-                            style={{
-                                padding: '8px 12px',
-                                background: page === 0 ? '#ccc' : '#007bff',
-                                color: '#333',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: page === 0 ? 'not-allowed' : 'pointer'
-                            }}
+                            onClick={() => setPage(p => p - 1)}
+                            className="btn-secondary"
                         >
                             Anterior
                         </button>
-                        <span style={{ display: 'flex', alignItems: 'center' }}>Página {page + 1} de {totalPages}</span>
+                        <span style={{ alignSelf: 'center' }}>Página {page + 1} de {Math.max(1, totalPages)}</span>
                         <button
-                            disabled={page >= totalPages - 1}
-                            onClick={() => setPage(page + 1)}
-                            style={{
-                                padding: '8px 12px',
-                                background: page >= totalPages - 1 ? '#ccc' : '#007bff',
-                                color: '#333',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer'
-                            }}
+                            title="Próxima Página"
+                            disabled={page >= Math.max(0, totalPages - 1)}
+                            onClick={() => setPage(p => p + 1)}
+                            className="btn-secondary"
                         >
                             Próxima
                         </button>
                     </div>
+                </div>
                 </>
             )}
             {/* Render Modal */}

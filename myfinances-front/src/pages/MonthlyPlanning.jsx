@@ -271,58 +271,16 @@ export function MonthlyPlanning() {
 
             // Prepare payload (remove temp ID)
             const payload = { ...transaction, id: null };
-
             try {
                 const response = await api.post(`/transaction-months/${monthData.id}/transactions`, payload);
+                const newTransaction = response.data;
 
-                // Identify the new real transaction (ID present in response but not in current real IDs)
-                // Actually, simpler: The response returns the full state. The new transaction is the one that correlates to our payload?
-                // No, we can diff the IDs.
+                // Refresh the whole month to ensure sorting and totals are correct
+                await fetchMonthData(currentDate.getMonth() + 1, currentDate.getFullYear());
 
-                // We need to update state IN PLACE to avoid jumping.
-                setMonthData(prev => {
-                    // Find the new real transaction from response
-                    // It's a bit hard to match exactly if we don't have the ID.
-                    // But we know 'prev' has some real IDs. 'response' has those + 1 new one.
-                    // (Assuming no concurrent modifications by others, which is fine for now).
-
-                    const prevRealIds = new Set(prev.transactions.filter(t => !isTempId(t.id)).map(t => t.id));
-                    const newTransactionFromServer = response.data.transactions.find(t => !prevRealIds.has(t.id));
-
-                    if (!newTransactionFromServer) {
-                        // Fallback: just use response data if we can't find it (shouldn't happen)
-                        const remainingTemps = prev.transactions.filter(t => isTempId(t.id) && t.id !== transaction.id);
-                        return {
-                            ...response.data,
-                            transactions: [...response.data.transactions, ...remainingTemps]
-                        };
-                    }
-
-                    // Update focus tracker to new ID so we don't lose track
-                    focusedRowIdRef.current = newTransactionFromServer.id;
-                    setFocusedRowId(newTransactionFromServer.id);
-
-                    // Defer Sort
-                    pendingSortedData.current = {
-                        data: response.data,
-                        triggerRowId: newTransactionFromServer.id
-                    };
-
-                    // Replace temp with real in place
-                    return {
-                        ...prev, // Keep current root state (roughly)
-                        // Actually we should update root fields like balance from response, but keep transactions order
-                        initialBalance: response.data.initialBalance,
-                        id: response.data.id,
-                        month: response.data.month,
-                        year: response.data.year,
-
-                        transactions: prev.transactions.map(t => {
-                            if (t.id === transaction.id) return newTransactionFromServer;
-                            return t;
-                        })
-                    };
-                });
+                // Set focus to the newly created transaction
+                setFocusedRowId(newTransaction.id);
+                focusedRowIdRef.current = newTransaction.id;
             } catch (error) {
                 console.error('Erro ao criar transação:', error);
                 setMessageModal({ isOpen: true, title: 'Erro', message: 'Erro ao criar linha.', type: 'error' });
@@ -331,37 +289,19 @@ export function MonthlyPlanning() {
             // Update existing
             try {
                 const response = await api.put(`/transaction-months/transactions/${transaction.id}`, transaction);
+                const updatedT = response.data;
 
-                // Check if user is still focused on this row via Ref (current state)
-                if (focusedRowIdRef.current === transaction.id) {
-                    // Update in-place to avoid jump
-                    setMonthData(prev => {
-                        if (!prev || !prev.transactions) return prev;
-                        const updatedBackendT = response.data.transactions.find(t => t.id === transaction.id);
-                        if (!updatedBackendT) return prev;
-
-                        const newTransactions = prev.transactions.map(t =>
-                            t.id === transaction.id ? updatedBackendT : t
-                        );
-
-                        return {
-                            ...response.data, // Keep potential root updates (balance, etc)
-                            transactions: newTransactions // But override transactions with our preserved order
-                        };
-                    });
-
-                    // Store for later sort
-                    pendingSortedData.current = {
-                        data: response.data,
-                        triggerRowId: transaction.id
+                // Update locally in place to avoid jump while user is editing
+                setMonthData(prev => {
+                    if (!prev || !prev.transactions) return prev;
+                    return {
+                        ...prev,
+                        transactions: prev.transactions.map(t => t.id === transaction.id ? updatedT : t)
                     };
-                } else {
-                    // User moved away, safe to sort
-                    setMonthData(prev => {
-                        if (!prev || !prev.transactions) return prev;
-                        return mergeWithTemps(response.data, prev.transactions);
-                    });
-                }
+                });
+
+                // We don't re-fetch here to avoid interrupting the user's flow, 
+                // but we could if we wanted immediate sorting consistency.
             } catch (error) {
                 console.error('Erro ao atualizar transação:', error);
             }
@@ -385,8 +325,9 @@ export function MonthlyPlanning() {
         if (!id) return;
 
         try {
-            const response = await api.delete(`/transaction-months/transactions/${id}`);
-            setMonthData(prev => mergeWithTemps(response.data, prev.transactions));
+            await api.delete(`/transaction-months/transactions/${id}`);
+            // Re-fetch to update totals and balance correctly
+            await fetchMonthData(currentDate.getMonth() + 1, currentDate.getFullYear());
         } catch (error) {
             console.error('Erro ao excluir:', error);
             setMessageModal({ isOpen: true, title: 'Erro', message: 'Erro ao excluir linha.', type: 'error' });
@@ -932,7 +873,7 @@ export function MonthlyPlanning() {
             </div>
 
             {/* Frozen Footer */}
-            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#2c3e50', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'center', gap: '50px', boxShadow: '0 -2px 10px rgba(0,0,0,0.1)', zIndex: 10 }}>
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#2c3e50', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'center', gap: '50px', boxShadow: '0 -2px 10px rgba(0,0,0,0.1)', zIndex: 1001 }}>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>PLANEJADO</div>
                     <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>

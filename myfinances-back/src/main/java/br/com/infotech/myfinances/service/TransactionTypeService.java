@@ -6,9 +6,12 @@ import br.com.infotech.myfinances.domain.TransactionTypeType;
 import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.dto.TransactionTypeDto;
 import br.com.infotech.myfinances.repository.TransactionTypeRepository;
+import br.com.infotech.myfinances.exception.TransactionTypeNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -59,6 +62,7 @@ public class TransactionTypeService {
    * @throws ValidationException     se o ID não for informado.
    * @throws EntityNotFoundException se não for encontrado.
    */
+  @Cacheable(value = "transaction-types", key = "#id")
   public TransactionTypeDto findById(Long id) {
     ValidationUtils.notNull(id, "ID obrigatório");
     return toDTO(findByIdOrThrow(id));
@@ -105,6 +109,7 @@ public class TransactionTypeService {
    *                                            (INCOME/EXPENSE).
    */
   @Transactional(propagation = Propagation.REQUIRED)
+  @CacheEvict(value = "transaction-types", key = "#id")
   public TransactionTypeDto update(Long id, TransactionTypeDto dto) {
     log.debug("Iniciando atualização de tipo de transação com ID: {}", id);
     ValidationUtils.notNull(id, "ID obrigatório");
@@ -134,6 +139,7 @@ public class TransactionTypeService {
    * @throws ValidationException se o ID for nulo.
    */
   @Transactional(propagation = Propagation.REQUIRED)
+  @CacheEvict(value = "transaction-types", key = "#id")
   public void delete(Long id) {
     log.debug("Iniciando exclusão lógica do tipo de transação com ID: {}", id);
     ValidationUtils.notNull(id, "ID obrigatório");
@@ -142,11 +148,11 @@ public class TransactionTypeService {
     transactionTypeRepository.save(entity);
   }
 
-  private TransactionType findByIdOrThrow(Long id) {
+  public TransactionType findByIdOrThrow(Long id) {
     return transactionTypeRepository.findById(id)
         .filter(t -> t.getUser().getId().equals(userService.getCurrentUser().getId()))
         .filter(t -> t.getStatus() == TransactionTypeStatus.ACTIVE)
-        .orElseThrow(() -> new EntityNotFoundException("Tipo de transação não encontrado."));
+        .orElseThrow(() -> new TransactionTypeNotFoundException("Tipo de transação não encontrado."));
   }
 
   /**

@@ -176,7 +176,18 @@ class TransactionMonthServiceTest {
         .iconName("test-icon")
         .build();
 
-    when(transactionService.getSortedTransactions(existingMonth)).thenReturn(List.of(t1));
+    TransactionDto t1Dto = TransactionDto.builder()
+        .id(100L)
+        .day(5)
+        .transactionTypeId(1L)
+        .description("Tr 1")
+        .amount(new BigDecimal("50.00"))
+        .status(TransactionStatus.COMPLETED)
+        .remark("Test remark")
+        .iconName("test-icon")
+        .build();
+
+    when(transactionService.getSortedTransactions(existingMonth)).thenReturn(List.of(t1Dto));
 
     TransactionMonthDto result = transactionMonthService.toDto(existingMonth);
 

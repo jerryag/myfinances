@@ -4,18 +4,14 @@ import br.com.infotech.myfinances.domain.Transaction;
 import br.com.infotech.myfinances.domain.TransactionMonth;
 import br.com.infotech.myfinances.domain.TransactionStatus;
 import br.com.infotech.myfinances.domain.TransactionType;
-import br.com.infotech.myfinances.domain.TransactionTypeType;
 import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.dto.TransactionDto;
 import br.com.infotech.myfinances.dto.TransactionMonthDto;
 import br.com.infotech.myfinances.exception.TransactionMonthNotFoundException;
 import br.com.infotech.myfinances.repository.TransactionMonthRepository;
-import br.com.infotech.myfinances.repository.TransactionRepository;
 import br.com.infotech.myfinances.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional(propagation = Propagation.SUPPORTS)
@@ -32,13 +27,9 @@ import java.util.stream.Collectors;
 public class TransactionMonthService {
 
   private final TransactionMonthRepository transactionMonthRepository;
-  private final TransactionRepository transactionRepository;
   private final TransactionTypeService transactionTypeService;
   private final UserService userService;
-
-  @Lazy
-  @Autowired
-  private TransactionService transactionService;
+  private final TransactionService transactionService;
 
   /**
    * Recupera o mês de transação atual do usuário ou cria um novo caso não exista.
@@ -111,29 +102,13 @@ public class TransactionMonthService {
   }
 
   TransactionMonthDto toDto(TransactionMonth month) {
-    List<Transaction> transactions = transactionService.getSortedTransactions(month);
-
-    var transactionDtos = transactions.stream()
-        .map(t -> TransactionDto.builder()
-            .id(t.getId())
-            .day(t.getTransactionDate().getDayOfMonth())
-            .transactionTypeId(t.getTransactionType().getId())
-            .description(t.getDescription())
-            .amount(t.getAmount())
-            .amount(t.getAmount())
-            .status(t.getStatus())
-            .remark(t.getRemark())
-            .iconName(t.getIconName())
-            .build())
-        .collect(Collectors.toList());
-
     return TransactionMonthDto.builder()
         .id(month.getId())
         .month(month.getMonth())
         .year(month.getYear())
         .status(month.getStatus())
         .initialBalance(month.getInitialBalance())
-        .transactions(transactionDtos)
+        .transactions(transactionService.getSortedTransactions(month))
         .build();
   }
 }

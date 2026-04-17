@@ -21,6 +21,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -54,6 +56,12 @@ class UserServiceTest {
   @Mock
   private UserRepository userRepository;
 
+  @Mock
+  private CacheManager cacheManager;
+
+  @Mock
+  private Cache cache;
+
   @Captor
   private ArgumentCaptor<User> userCaptor;
 
@@ -63,6 +71,9 @@ class UserServiceTest {
   void setUp() {
     ReflectionTestUtils.setField(userService, "defaultPassword", defaultPassword);
     UserContext.clear(); // Ensure context is empty before each test
+
+    // Default behavior for cache manager
+    when(cacheManager.getCache("users")).thenReturn(cache);
   }
 
   private User createValidUser(Long id, String login, String password, UserStatus status, UserType type) {
@@ -149,6 +160,7 @@ class UserServiceTest {
     userService.changePassword(userId, oldPassword, newPassword);
 
     verify(userRepository).save(userCaptor.capture());
+    verify(cache).evict(mockUser.getLogin());
     User savedUser = userCaptor.getValue();
     assertEquals(CryptUtils.encrypt(newPassword), savedUser.getPassword());
     assertFalse(savedUser.getChangePwdOnLogin());
@@ -294,6 +306,7 @@ class UserServiceTest {
     userService.changeStatus(id, UserStatus.BLOCKED);
 
     verify(userRepository).save(userCaptor.capture());
+    verify(cache).evict(mockUser.getLogin());
     assertEquals(UserStatus.BLOCKED, userCaptor.getValue().getStatus());
   }
 

@@ -11,6 +11,10 @@ import br.com.infotech.myfinances.exception.InvalidNewPasswordDataException;
 import br.com.infotech.myfinances.repository.UserRepository;
 import br.com.infotech.myfinances.util.CryptUtils;
 import br.com.infotech.myfinances.util.MdcUtils;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 
 import org.apache.commons.lang3.StringUtils;
@@ -44,11 +48,14 @@ public class UserService {
 
   private final UserRepository userRepository;
 
+  private final CacheManager cacheManager;
+
   @Value("${app.params.defaultPassword}")
   private String defaultPassword;
 
-  public UserService(UserRepository userRepository) {
+  public UserService(UserRepository userRepository, CacheManager cacheManager) {
     this.userRepository = userRepository;
+    this.cacheManager = cacheManager;
   }
 
   /**
@@ -140,6 +147,7 @@ public class UserService {
     user.setPassword(CryptUtils.encrypt(newPassword));
     user.setChangePwdOnLogin(false);
     userRepository.save(user);
+    evictUserCache(user.getLogin());
   }
 
   private void validateNewPassword(String password) {
@@ -252,6 +260,7 @@ public class UserService {
    *                             MASTER.
    */
   @Transactional(propagation = Propagation.REQUIRED)
+  @CacheEvict(value = "users", key = "#userDto.login")
   public UserDto update(Long id, UserDto userDto) {
     log.debug("Iniciando atualização do usuário com ID: {}", id);
     ValidationUtils.notNull(userDto, "Objeto usuário obrigatório");
@@ -307,6 +316,7 @@ public class UserService {
 
     user.setStatus(status);
     userRepository.save(user);
+    evictUserCache(user.getLogin());
   }
 
   /**
@@ -322,4 +332,12 @@ public class UserService {
     }
     return user;
   }
+
+  private void evictUserCache(String login) {
+    Cache cache = cacheManager.getCache("users");
+    if (cache != null) {
+      cache.evict(login);
+    }
+  }
+
 }
