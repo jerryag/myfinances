@@ -37,6 +37,7 @@ import br.com.infotech.myfinances.dto.TransactionTypeDto;
 import br.com.infotech.myfinances.exception.TransactionTypeChangeTypeException;
 import br.com.infotech.myfinances.exception.ValidationException;
 import br.com.infotech.myfinances.repository.TransactionTypeRepository;
+import br.com.infotech.myfinances.exception.TransactionTypeNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 
 @ExtendWith(SpringExtension.class)
@@ -150,7 +151,7 @@ class TransactionTypeServiceTest {
   @Test
   void testFindById_NotFoundInDb() {
     when(transactionTypeRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThrows(EntityNotFoundException.class, () -> transactionTypeService.findById(1L));
+    assertThrows(TransactionTypeNotFoundException.class, () -> transactionTypeService.findById(1L));
   }
 
   @Test
@@ -159,7 +160,7 @@ class TransactionTypeServiceTest {
     mockEntity.setUser(User.builder().id(999L).build()); // different user
     when(transactionTypeRepository.findById(1L)).thenReturn(Optional.of(mockEntity));
 
-    assertThrows(EntityNotFoundException.class, () -> transactionTypeService.findById(1L));
+    assertThrows(TransactionTypeNotFoundException.class, () -> transactionTypeService.findById(1L));
   }
 
   @Test
@@ -168,7 +169,7 @@ class TransactionTypeServiceTest {
     mockEntity.setStatus(TransactionTypeStatus.DELETED);
     when(transactionTypeRepository.findById(1L)).thenReturn(Optional.of(mockEntity));
 
-    assertThrows(EntityNotFoundException.class, () -> transactionTypeService.findById(1L));
+    assertThrows(TransactionTypeNotFoundException.class, () -> transactionTypeService.findById(1L));
   }
 
   // --- create ---

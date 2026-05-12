@@ -20,6 +20,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 
 @Data
 @Builder
@@ -66,6 +71,9 @@ public class Transaction {
 
   @Column(name = "icon_name", length = 50)
   private String iconName;
+
+  @OneToMany(mappedBy = "transaction", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<TransactionDetail> details;
 
   @PrePersist
   public void prePersist() {

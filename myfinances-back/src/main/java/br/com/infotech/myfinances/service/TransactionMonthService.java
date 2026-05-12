@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import br.com.infotech.myfinances.dto.TransactionMonthReportDto;
+import br.com.infotech.myfinances.dto.TransactionReportItemDto;
+import br.com.infotech.myfinances.dto.TransactionDetailDto;
 
 @Service
 @Transactional(propagation = Propagation.SUPPORTS)
@@ -109,6 +112,39 @@ public class TransactionMonthService {
         .status(month.getStatus())
         .initialBalance(month.getInitialBalance())
         .transactions(transactionService.getSortedTransactions(month))
+        .build();
+  }
+
+  @Transactional(propagation = Propagation.SUPPORTS)
+  public TransactionMonthReportDto getReportData(Integer month, Integer year) {
+    User currentUser = userService.getCurrentUser();
+    TransactionMonth tMonth = transactionMonthRepository.findByUserAndMonthAndYear(currentUser, month, year)
+        .orElseThrow(() -> new TransactionMonthNotFoundException("Mês não encontrado"));
+
+    List<TransactionDto> dtos = transactionService.getSortedTransactions(tMonth);
+
+    List<TransactionReportItemDto> items = dtos.stream().map(dto -> {
+      String typeDesc = transactionTypeService.findByIdOrThrow(dto.getTransactionTypeId()).getDescription();
+      List<TransactionDetailDto> details = transactionService.getDetail(dto.getId());
+
+      return TransactionReportItemDto.builder()
+          .id(dto.getId())
+          .day(dto.getDay())
+          .transactionTypeId(dto.getTransactionTypeId())
+          .transactionTypeDescription(typeDesc)
+          .description(dto.getDescription())
+          .amount(dto.getAmount())
+          .status(dto.getStatus())
+          .remark(dto.getRemark())
+          .details(details)
+          .build();
+    }).toList();
+
+    return TransactionMonthReportDto.builder()
+        .month(tMonth.getMonth())
+        .year(tMonth.getYear())
+        .initialBalance(tMonth.getInitialBalance())
+        .transactions(items)
         .build();
   }
 }

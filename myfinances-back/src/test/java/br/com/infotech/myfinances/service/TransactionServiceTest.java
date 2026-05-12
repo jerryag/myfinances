@@ -25,11 +25,13 @@ import org.mockito.Mock;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import br.com.infotech.myfinances.domain.Transaction;
+import br.com.infotech.myfinances.domain.TransactionDetail;
 import br.com.infotech.myfinances.domain.TransactionMonth;
 import br.com.infotech.myfinances.domain.TransactionStatus;
 import br.com.infotech.myfinances.domain.TransactionType;
 import br.com.infotech.myfinances.domain.TransactionTypeType;
 import br.com.infotech.myfinances.domain.User;
+import br.com.infotech.myfinances.dto.TransactionDetailDto;
 import br.com.infotech.myfinances.dto.TransactionDto;
 import br.com.infotech.myfinances.dto.TransactionMonthDto;
 import br.com.infotech.myfinances.exception.TransactionMonthNotFoundException;
@@ -39,6 +41,10 @@ import br.com.infotech.myfinances.exception.ValidationException;
 import br.com.infotech.myfinances.repository.TransactionMonthRepository;
 import br.com.infotech.myfinances.repository.TransactionRepository;
 import br.com.infotech.myfinances.repository.TransactionTypeRepository;
+import br.com.infotech.myfinances.repository.TransactionDetailRepository;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @ExtendWith(SpringExtension.class)
 class TransactionServiceTest {
@@ -48,6 +54,9 @@ class TransactionServiceTest {
 
   @Mock
   private TransactionRepository transactionRepository;
+
+  @Mock
+  private TransactionDetailRepository transactionDetailRepository;
 
   @Mock
   private TransactionTypeService transactionTypeService;
@@ -63,6 +72,9 @@ class TransactionServiceTest {
 
   @Captor
   private ArgumentCaptor<Transaction> transactionCaptor;
+
+  @Captor
+  private ArgumentCaptor<TransactionDetail> transactionDetailCaptor;
 
   private User mockUser;
   private TransactionMonth mockMonth;
@@ -121,6 +133,14 @@ class TransactionServiceTest {
   }
 
   @Test
+  void testAddTransaction_RemarkTooLong() {
+    TransactionDto invalidDto = createValidDto(100L);
+    invalidDto.setRemark("A".repeat(101));
+    ValidationException ex = assertThrows(ValidationException.class, () -> transactionService.addTransaction(10L, invalidDto));
+    assertEquals("O tamanho máximo permitido para a observação é de 100 caracteres.", ex.getMessage());
+  }
+
+  @Test
   void testAddTransaction_MonthNotFound() {
     when(transactionMonthRepository.findById(10L)).thenReturn(Optional.empty());
     assertThrows(TransactionMonthNotFoundException.class,
@@ -170,6 +190,14 @@ class TransactionServiceTest {
         () -> transactionService.updateTransaction(50L, createValidDto(100L)));
   }
 
+  @Test
+  void testUpdateTransaction_RemarkTooLong() {
+    TransactionDto invalidDto = createValidDto(100L);
+    invalidDto.setRemark("A".repeat(101));
+    ValidationException ex = assertThrows(ValidationException.class, () -> transactionService.updateTransaction(50L, invalidDto));
+    assertEquals("O tamanho máximo permitido para a observação é de 100 caracteres.", ex.getMessage());
+  }
+
   // --- deleteTransaction ---
   @Test
   void testDeleteTransaction_Success() {
@@ -180,6 +208,7 @@ class TransactionServiceTest {
 
     transactionService.deleteTransaction(50L);
 
+    verify(transactionDetailRepository).deleteByTransaction(existingTrans);
     verify(transactionRepository).delete(existingTrans);
   }
 
@@ -289,5 +318,132 @@ class TransactionServiceTest {
     assertEquals(t2.getId(), result.get(1).getId());
     assertEquals(t1.getId(), result.get(2).getId());
     assertEquals(t4.getId(), result.get(3).getId());
+  }
+
+  // --- saveDetail ---
+  @Test
+  void testSaveDetail_Insert_Success() {
+    Transaction existingTrans = Transaction.builder().id(50L).build();
+    when(transactionRepository.findById(50L)).thenReturn(Optional.of(existingTrans));
+
+    TransactionDetailDto dto = TransactionDetailDto.builder()
+        .detailDate(OffsetDateTime.of(2023, 10, 5, 10, 0, 0, 0, ZoneOffset.UTC))
+        .amount(new BigDecimal("50.00"))
+        .description("New detail")
+        .build();
+
+    when(transactionDetailRepository.save(any(TransactionDetail.class))).thenAnswer(i -> {
+      TransactionDetail saved = i.getArgument(0);
+      saved.setId(100L);
+      return saved;
+    });
+
+    TransactionDetailDto result = transactionService.saveDetail(50L, dto);
+
+    assertNotNull(result);
+    assertEquals(100L, result.getId());
+    assertEquals(50L, result.getTransactionId());
+    assertEquals(new BigDecimal("50.00"), result.getAmount());
+
+    verify(transactionDetailRepository).save(transactionDetailCaptor.capture());
+    TransactionDetail captured = transactionDetailCaptor.getValue();
+    assertEquals(existingTrans, captured.getTransaction());
+    assertEquals("New detail", captured.getDescription());
+  }
+
+  @Test
+  void testSaveDetail_Update_Success() {
+    Transaction existingTrans = Transaction.builder().id(50L).build();
+    when(transactionRepository.findById(50L)).thenReturn(Optional.of(existingTrans));
+
+    TransactionDetail existingDetail = new TransactionDetail();
+    existingDetail.setId(100L);
+    existingDetail.setTransaction(existingTrans);
+    when(transactionDetailRepository.findById(100L)).thenReturn(Optional.of(existingDetail));
+
+    TransactionDetailDto dto = TransactionDetailDto.builder()
+        .id(100L)
+        .detailDate(OffsetDateTime.of(2023, 10, 5, 10, 0, 0, 0, ZoneOffset.UTC))
+        .amount(new BigDecimal("60.00"))
+        .description("Updated detail")
+        .build();
+
+    when(transactionDetailRepository.save(any(TransactionDetail.class))).thenAnswer(i -> i.getArgument(0));
+
+    TransactionDetailDto result = transactionService.saveDetail(50L, dto);
+
+    assertEquals(100L, result.getId());
+    assertEquals(new BigDecimal("60.00"), result.getAmount());
+  }
+
+  @Test
+  void testSaveDetail_ValidationFailed() {
+    TransactionDetailDto dto = TransactionDetailDto.builder().build();
+    assertThrows(ValidationException.class, () -> transactionService.saveDetail(null, dto));
+    assertThrows(ValidationException.class, () -> transactionService.saveDetail(50L, null));
+    
+    // Missing date
+    TransactionDetailDto missingDate = TransactionDetailDto.builder().amount(BigDecimal.TEN).description("d").build();
+    assertThrows(ValidationException.class, () -> transactionService.saveDetail(50L, missingDate));
+  }
+
+  @Test
+  void testSaveDetail_WrongTransaction() {
+    Transaction transA = Transaction.builder().id(50L).build();
+    Transaction transB = Transaction.builder().id(60L).build();
+    
+    when(transactionRepository.findById(50L)).thenReturn(Optional.of(transA));
+
+    TransactionDetail existingDetail = new TransactionDetail();
+    existingDetail.setId(100L);
+    existingDetail.setTransaction(transB); // Different transaction
+    when(transactionDetailRepository.findById(100L)).thenReturn(Optional.of(existingDetail));
+
+    TransactionDetailDto dto = TransactionDetailDto.builder()
+        .id(100L)
+        .detailDate(OffsetDateTime.now())
+        .amount(BigDecimal.TEN)
+        .description("d")
+        .build();
+
+    ValidationException ex = assertThrows(ValidationException.class, () -> transactionService.saveDetail(50L, dto));
+    assertEquals("O detalhe não pertence a esta transação (transactionId: 50)", ex.getMessage());
+  }
+
+  // --- removeDetail ---
+  @Test
+  void testRemoveDetail_Success() {
+    TransactionDetail detail = new TransactionDetail();
+    detail.setId(100L);
+    when(transactionDetailRepository.findById(100L)).thenReturn(Optional.of(detail));
+
+    transactionService.removeDetail(100L);
+
+    verify(transactionDetailRepository).delete(detail);
+  }
+
+  @Test
+  void testRemoveDetail_NotFound() {
+    when(transactionDetailRepository.findById(100L)).thenReturn(Optional.empty());
+    assertThrows(ValidationException.class, () -> transactionService.removeDetail(100L));
+  }
+
+  // --- getDetail ---
+  @Test
+  void testGetDetail_Success() {
+    Transaction existingTrans = Transaction.builder().id(50L).build();
+    when(transactionRepository.findById(50L)).thenReturn(Optional.of(existingTrans));
+
+    TransactionDetail d1 = new TransactionDetail(1L, existingTrans, OffsetDateTime.now(), "D1", BigDecimal.ONE);
+    TransactionDetail d2 = new TransactionDetail(2L, existingTrans, OffsetDateTime.now(), "D2", BigDecimal.TEN);
+    
+    when(transactionDetailRepository.findByTransactionOrderByDetailDateAscAmountAscDescriptionAsc(existingTrans))
+        .thenReturn(List.of(d1, d2));
+
+    List<TransactionDetailDto> result = transactionService.getDetail(50L);
+
+    assertEquals(2, result.size());
+    assertEquals(1L, result.get(0).getId());
+    assertEquals(2L, result.get(1).getId());
   }
 }

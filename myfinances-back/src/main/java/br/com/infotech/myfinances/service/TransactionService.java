@@ -6,10 +6,13 @@ import br.com.infotech.myfinances.domain.TransactionType;
 import br.com.infotech.myfinances.domain.TransactionTypeType;
 import br.com.infotech.myfinances.domain.User;
 import br.com.infotech.myfinances.dto.TransactionDto;
+import br.com.infotech.myfinances.domain.TransactionDetail;
+import br.com.infotech.myfinances.dto.TransactionDetailDto;
 import br.com.infotech.myfinances.exception.TransactionMonthNotFoundException;
 import br.com.infotech.myfinances.exception.TransactionNotFoundException;
 import br.com.infotech.myfinances.exception.TransactionTypeNotFoundException;
 import br.com.infotech.myfinances.exception.ValidationException;
+import br.com.infotech.myfinances.repository.TransactionDetailRepository;
 import br.com.infotech.myfinances.repository.TransactionMonthRepository;
 import br.com.infotech.myfinances.repository.TransactionRepository;
 import br.com.infotech.myfinances.util.ValidationUtils;
@@ -31,6 +34,7 @@ import java.util.Optional;
 public class TransactionService {
 
   private final TransactionRepository transactionRepository;
+  private final TransactionDetailRepository transactionDetailRepository;
   private final TransactionTypeService transactionTypeService;
   private final TransactionMonthRepository transactionMonthRepository;
   private final UserService userService;
@@ -56,6 +60,10 @@ public class TransactionService {
     ValidationUtils.notNull(dto.getTransactionTypeId(), "O tipo de transação é obrigatório");
     ValidationUtils.notNull(dto.getDay(), "O dia é obrigatório");
     ValidationUtils.notNull(dto.getAmount(), "O valor é obrigatório");
+    
+    if (dto.getRemark() != null && dto.getRemark().length() > 100) {
+        throw new ValidationException("O tamanho máximo permitido para a observação é de 100 caracteres.");
+    }
 
     TransactionMonth month = transactionMonthRepository.findById(monthId)
         .orElseThrow(() -> new TransactionMonthNotFoundException("Mês não encontrado"));
@@ -87,6 +95,10 @@ public class TransactionService {
     ValidationUtils.notNull(dto.getTransactionTypeId(), "O tipo de transação é obrigatório");
     ValidationUtils.notNull(dto.getDay(), "O dia é obrigatório");
     ValidationUtils.notNull(dto.getAmount(), "O valor é obrigatório");
+
+    if (dto.getRemark() != null && dto.getRemark().length() > 100) {
+        throw new ValidationException("O tamanho máximo permitido para a observação é de 100 caracteres.");
+    }
 
     Transaction transaction = transactionRepository.findById(transactionId)
         .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
@@ -140,6 +152,7 @@ public class TransactionService {
     Transaction transaction = transactionRepository.findById(transactionId)
         .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
+    transactionDetailRepository.deleteByTransaction(transaction);
     transactionRepository.delete(transaction);
   }
 
@@ -209,6 +222,7 @@ public class TransactionService {
         .status(t.getStatus())
         .remark(t.getRemark())
         .iconName(t.getIconName())
+        .hasDetails(t.getDetails() != null && !t.getDetails().isEmpty())
         .build();
   }
 
@@ -228,5 +242,74 @@ public class TransactionService {
     }
     // Desempate: Valor crescente
     return t1.getAmount().compareTo(t2.getAmount());
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public TransactionDetailDto saveDetail(Long transactionId, TransactionDetailDto dto) {
+    log.debug("Salvando detalhe para a transação ID: {}", transactionId);
+    ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
+    ValidationUtils.notNull(dto, "O detalhe é obrigatório");
+    ValidationUtils.notNull(dto.getDetailDate(), "A data do detalhe é obrigatória");
+    ValidationUtils.notNull(dto.getAmount(), "O valor do detalhe é obrigatório");
+    ValidationUtils.notNull(dto.getDescription(), "A descrição do detalhe é obrigatória");
+
+    Transaction transaction = transactionRepository.findById(transactionId)
+        .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
+
+    TransactionDetail detail;
+    if (dto.getId() != null) {
+      detail = transactionDetailRepository.findById(dto.getId())
+          .orElseThrow(() -> new ValidationException("Detalhe da transação não encontrado (id: " + dto.getId() + ")"));
+      // Garante que o detalhe pertence à transação correta
+      if (!detail.getTransaction().getId().equals(transaction.getId())) {
+        throw new ValidationException("O detalhe não pertence a esta transação (transactionId: " + transactionId + ")");
+      }
+    } else {
+      detail = new TransactionDetail();
+      detail.setTransaction(transaction);
+    }
+
+    detail.setDetailDate(dto.getDetailDate());
+    detail.setDescription(dto.getDescription());
+    detail.setAmount(dto.getAmount());
+
+    return toDetailDto(transactionDetailRepository.save(detail));
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public void removeDetail(Long detailId) {
+    log.debug("Removendo detalhe ID: {}", detailId);
+    ValidationUtils.notNull(detailId, "ID do detalhe é obrigatório");
+
+    TransactionDetail detail = transactionDetailRepository.findById(detailId)
+        .orElseThrow(() -> new ValidationException("Detalhe da transação não encontrado (id: " + detailId + ")"));
+
+    transactionDetailRepository.delete(detail);
+  }
+
+  public List<TransactionDetailDto> getDetail(Long transactionId) {
+    log.debug("Buscando detalhes da transação ID: {}", transactionId);
+    ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
+
+    Transaction transaction = transactionRepository.findById(transactionId)
+        .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
+
+    return transactionDetailRepository.findByTransactionOrderByDetailDateAscAmountAscDescriptionAsc(transaction)
+        .stream()
+        .map(this::toDetailDto)
+        .toList();
+  }
+
+  private TransactionDetailDto toDetailDto(TransactionDetail detail) {
+    if (detail == null) {
+      return null;
+    }
+    return TransactionDetailDto.builder()
+        .id(detail.getId())
+        .transactionId(detail.getTransaction().getId())
+        .detailDate(detail.getDetailDate())
+        .description(detail.getDescription())
+        .amount(detail.getAmount())
+        .build();
   }
 }

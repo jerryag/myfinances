@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { usePageTitle } from '../context/PageTitleContext';
-import { FaPlus, FaMinus, FaTrash, FaChevronLeft, FaChevronRight, FaRegComment, FaComment, FaHistory, FaSync, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaTrash, FaChevronLeft, FaChevronRight, FaRegComment, FaComment, FaHistory, FaSync, FaArrowUp, FaArrowDown, FaList } from 'react-icons/fa';
 import { MessageModal } from '../components/MessageModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { getIcon } from '../utils/IconRepository';
@@ -16,6 +16,7 @@ export function MonthlyPlanning() {
     const [messageModal, setMessageModal] = useState({ isOpen: false, title: '', message: '', type: 'info' });
     const [editingRemark, setEditingRemark] = useState({ isOpen: false, transactionId: null, currentRemark: '' });
     const [editingIcon, setEditingIcon] = useState({ isOpen: false, transactionId: null, currentIcon: '' });
+    const [detailModal, setDetailModal] = useState({ isOpen: false, transactionId: null, transactionDesc: '' });
 
     // Filters State
     const [filters, setFilters] = useState({ day: '', types: [], typeText: '' });
@@ -547,7 +548,7 @@ export function MonthlyPlanning() {
                             <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #333' }}>Valor</th>
                             <th style={{ width: '120px', padding: '10px', borderBottom: '1px solid #333' }}>Saldo</th>
                             <th style={{ width: '80px', padding: '10px', borderBottom: '1px solid #333', textAlign: 'center' }}>Realizado</th>
-                            <th style={{ width: '40px', padding: '10px', borderBottom: '1px solid #333' }}>Obs</th>
+                            <th style={{ width: '80px', padding: '10px', borderBottom: '1px solid #333' }}>Obs/Det</th>
                             <th style={{ width: '50px', padding: '10px', borderBottom: '1px solid #333' }}>#</th>
                         </tr>
                     </thead>
@@ -764,15 +765,35 @@ export function MonthlyPlanning() {
                                             />
                                         </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
-                                            <button
-                                                onClick={() => setEditingRemark({ isOpen: true, transactionId: t.id, currentRemark: t.remark })}
-                                                onFocus={() => setFocusedRowId(t.id)}
-                                                className="btn-icon"
-                                                style={{ color: hasRemark ? 'green' : '#888', cursor: 'pointer', border: 'none', background: 'transparent' }}
-                                                title={t.remark || "Adicionar observação"}
-                                            >
-                                                {hasRemark ? <FaComment size={14} /> : <FaRegComment size={14} />}
-                                            </button>
+                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => setEditingRemark({ isOpen: true, transactionId: t.id, currentRemark: t.remark })}
+                                                    onFocus={() => setFocusedRowId(t.id)}
+                                                    className="btn-icon"
+                                                    style={{ color: hasRemark ? 'green' : '#888', cursor: 'pointer', border: 'none', background: 'transparent' }}
+                                                    title={t.remark || "Adicionar observação"}
+                                                >
+                                                    {hasRemark ? <FaComment size={14} /> : <FaRegComment size={14} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isTempId(t.id)) {
+                                                            const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.amount || 0);
+                                                            const fullTitle = `${typeDef ? typeDef.description : 'Sem Tipo'} - ${t.description || 'Sem Descrição'} - ${formattedAmount}`;
+                                                            setDetailModal({ isOpen: true, transactionId: t.id, transactionDesc: fullTitle });
+                                                        } else {
+                                                            alert('Salve a transação primeiro para adicionar detalhes.');
+                                                        }
+                                                    }}
+                                                    onFocus={() => setFocusedRowId(t.id)}
+                                                    className="btn-icon"
+                                                    style={{ color: isTempId(t.id) ? '#555' : (t.hasDetails ? '#3498db' : '#888'), cursor: isTempId(t.id) ? 'not-allowed' : 'pointer', border: 'none', background: 'transparent' }}
+                                                    title="Detalhes"
+                                                    disabled={isTempId(t.id)}
+                                                >
+                                                    <FaList size={14} />
+                                                </button>
+                                            </div>
                                         </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <button
@@ -953,6 +974,27 @@ export function MonthlyPlanning() {
                 initialValue={editingRemark.currentRemark}
                 onSave={handleRemarkSave}
             />
+
+            <TransactionDetailModal
+                isOpen={detailModal.isOpen}
+                onClose={(totalDetails) => {
+                    const tId = detailModal.transactionId;
+                    if (tId) {
+                        const t = monthData?.transactions?.find(tr => tr.id === tId);
+                        if (t && (t.amount === 0 || t.amount === null || t.amount === undefined)) {
+                            if (totalDetails > 0) {
+                                const updatedT = { ...t, amount: totalDetails };
+                                handleTransactionBlur(updatedT);
+                            }
+                        }
+                    }
+                    setDetailModal({ isOpen: false, transactionId: null, transactionDesc: '' });
+                    fetchMonthData(currentDate.getMonth() + 1, currentDate.getFullYear());
+                }}
+                transactionId={detailModal.transactionId}
+                transactionDesc={detailModal.transactionDesc}
+                currentDate={currentDate}
+            />
         </div >
     );
 }
@@ -1035,12 +1077,24 @@ const MoneyInput = ({ value, onSave, onFocus, textColor }) => {
 
 const RemarkModal = ({ isOpen, onClose, initialValue, onSave }) => {
     const [value, setValue] = useState(initialValue || '');
+    const [error, setError] = useState('');
+    const MAX_LENGTH = 100;
 
     useEffect(() => {
         setValue(initialValue || '');
+        setError('');
     }, [initialValue, isOpen]);
 
     if (!isOpen) return null;
+
+    const handleSave = () => {
+        if (value.length > MAX_LENGTH) {
+            setError(`Tamanho excedido. O limite é de ${MAX_LENGTH} caracteres.`);
+            return;
+        }
+        onSave(value);
+        onClose();
+    };
 
     return (
         <div style={{
@@ -1051,19 +1105,214 @@ const RemarkModal = ({ isOpen, onClose, initialValue, onSave }) => {
                 <h3 style={{ marginTop: 0, color: '#333' }}>Observação</h3>
                 <textarea
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    style={{ width: '100%', height: '100px', padding: '10px', marginTop: '10px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical', boxSizing: 'border-box', color: '#333' }}
+                    onChange={(e) => {
+                        setValue(e.target.value);
+                        if (e.target.value.length <= MAX_LENGTH) {
+                            setError('');
+                        }
+                    }}
+                    style={{ width: '100%', height: '100px', padding: '10px', marginTop: '10px', borderRadius: '4px', border: error || value.length > MAX_LENGTH ? '1px solid red' : '1px solid #ccc', resize: 'vertical', boxSizing: 'border-box', color: '#333' }}
                     placeholder="Digite uma observação..."
                 />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px', minHeight: '18px' }}>
+                    <span style={{ fontSize: '12px', color: value.length > MAX_LENGTH ? 'red' : '#888' }}>
+                        {value.length} / {MAX_LENGTH}
+                    </span>
+                    {error && <span style={{ fontSize: '12px', color: 'red', textAlign: 'right' }}>{error}</span>}
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                    <button onClick={onClose} style={{ padding: '8px 16px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={onClose} style={{ padding: '8px 16px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#333' }}>Cancelar</button>
                     <button
-                        onClick={() => { onSave(value); onClose(); }}
+                        onClick={handleSave}
                         style={{ padding: '8px 16px', background: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                     >
                         Salvar
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const TransactionDetailModal = ({ isOpen, onClose, transactionId, transactionDesc, currentDate }) => {
+    const [details, setDetails] = useState([]);
+    const [loading, setLoading] = useState(false);
+    
+    const [newDesc, setNewDesc] = useState('');
+    const [newDay, setNewDay] = useState('');
+    const [newAmount, setNewAmount] = useState(0);
+
+    useEffect(() => {
+        if (isOpen && transactionId) {
+            fetchDetails();
+        } else {
+            setDetails([]);
+            resetNewForm();
+        }
+    }, [isOpen, transactionId]);
+
+    const fetchDetails = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/transaction-months/transactions/${transactionId}/details`);
+            setDetails(res.data);
+        } catch (error) {
+            console.error("Erro ao buscar detalhes:", error);
+            alert("Erro ao buscar detalhes.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetNewForm = () => {
+        setNewDesc('');
+        setNewDay('');
+        setNewAmount(0);
+    };
+
+    const handleSaveDetail = async () => {
+        if (!newDesc || !newDay || newAmount === 0) {
+            alert("Preencha descrição, dia e valor.");
+            return;
+        }
+        
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth(); 
+        const dateObj = new Date(Date.UTC(year, month, parseInt(newDay), 12, 0, 0));
+        
+        const payload = {
+            transactionId: transactionId,
+            description: newDesc,
+            detailDate: dateObj.toISOString(),
+            amount: newAmount
+        };
+
+        try {
+            await api.post(`/transaction-months/transactions/${transactionId}/details`, payload);
+            fetchDetails();
+            resetNewForm();
+        } catch (error) {
+            console.error("Erro ao salvar detalhe:", error);
+            alert("Erro ao salvar detalhe.");
+        }
+    };
+
+    const handleDeleteDetail = async (detailId) => {
+        if (!window.confirm("Deseja realmente excluir este detalhe?")) return;
+        
+        try {
+            await api.delete(`/transaction-months/transactions/details/${detailId}`);
+            setDetails(prev => prev.filter(d => d.id !== detailId));
+        } catch (error) {
+            console.error("Erro ao excluir detalhe:", error);
+            alert("Erro ao excluir detalhe.");
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const getDayFromDate = (isoString) => {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        return d.getUTCDate();
+    };
+
+    const totalDetails = details.reduce((acc, curr) => acc + curr.amount, 0);
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex',
+            justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+            <div style={{
+                background: '#2a2a2a', color: '#fff', padding: '20px',
+                borderRadius: '8px', width: '600px', maxWidth: '95%',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                display: 'flex', flexDirection: 'column', gap: '15px'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0 }}>Detalhes: {transactionDesc}</h3>
+                    <button onClick={() => onClose(totalDetails)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}>&times;</button>
+                </div>
+                
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>Carregando...</div>
+                ) : (
+                    <>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead style={{ borderBottom: '1px solid #444', position: 'sticky', top: 0, background: '#2a2a2a' }}>
+                                    <tr>
+                                        <th style={{ padding: '8px' }}>Descrição</th>
+                                        <th style={{ padding: '8px', width: '60px', textAlign: 'center' }}>Dia</th>
+                                        <th style={{ padding: '8px', width: '120px', textAlign: 'right' }}>Valor</th>
+                                        <th style={{ padding: '8px', width: '40px', textAlign: 'center' }}>#</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {details.map(d => (
+                                        <tr key={d.id} style={{ borderBottom: '1px solid #333' }}>
+                                            <td style={{ padding: '8px' }}>{d.description}</td>
+                                            <td style={{ padding: '8px', textAlign: 'center' }}>{getDayFromDate(d.detailDate)}</td>
+                                            <td style={{ padding: '8px', textAlign: 'right' }}>
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.amount)}
+                                            </td>
+                                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                <button onClick={() => handleDeleteDetail(d.id)} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}>
+                                                    <FaTrash />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {details.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '15px', color: '#888' }}>
+                                                Nenhum detalhe encontrado.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0', borderTop: '1px solid #444', fontWeight: 'bold' }}>
+                            Total Detalhes: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDetails)}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: '#333', borderRadius: '4px' }}>
+                            <input 
+                                type="text" 
+                                placeholder="Nova descrição" 
+                                value={newDesc}
+                                onChange={e => setNewDesc(e.target.value)}
+                                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #555', background: '#222', color: '#fff' }}
+                            />
+                            <input 
+                                type="number" 
+                                placeholder="Dia" 
+                                min="1" max="31"
+                                value={newDay}
+                                onChange={e => setNewDay(e.target.value)}
+                                style={{ width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid #555', background: '#222', color: '#fff', textAlign: 'center' }}
+                            />
+                            <div style={{ width: '120px', background: '#222', borderRadius: '4px', border: '1px solid #555', padding: '8px' }}>
+                                <MoneyInput 
+                                    value={newAmount}
+                                    onSave={(val) => setNewAmount(val)}
+                                    textColor="#fff"
+                                />
+                            </div>
+                            <button 
+                                onClick={handleSaveDetail}
+                                title="Adicionar"
+                                style={{ padding: '8px 12px', background: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            >
+                                <FaPlus />
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
