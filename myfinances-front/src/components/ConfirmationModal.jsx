@@ -25,7 +25,7 @@ export const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, 
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
             }}>
                 <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#333' }}>{title}</h3>
-                <p style={{ color: '#666', marginBottom: '25px' }}>{message}</p>
+                <p style={{ color: '#666', marginBottom: '25px', whiteSpace: 'pre-line' }}>{message}</p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                     <button
                         onClick={onClose}

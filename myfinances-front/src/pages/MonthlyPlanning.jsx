@@ -927,7 +927,13 @@ export function MonthlyPlanning() {
                 onClose={() => setConfirmModal({ isOpen: false, transactionId: null })}
                 onConfirm={confirmDeleteTransaction}
                 title="Confirmar Exclusão"
-                message="Tem certeza que deseja excluir esta transação?"
+                message={(() => {
+                    const t = monthData?.transactions?.find(tr => tr.id === confirmModal.transactionId);
+                    if (t?.hasDetails) {
+                        return "Atenção! Ao excluir essa transação, todos os detalhes da transação também serão excluídos.\nTem certeza que deseja excluir esta transação?";
+                    }
+                    return "Tem certeza que deseja excluir esta transação?";
+                })()}
                 confirmText="Sim, Excluir"
                 cancelText="Cancelar"
             />
@@ -977,14 +983,14 @@ export function MonthlyPlanning() {
 
             <TransactionDetailModal
                 isOpen={detailModal.isOpen}
-                onClose={(totalDetails) => {
+                onClose={async (totalDetails) => {
                     const tId = detailModal.transactionId;
                     if (tId) {
                         const t = monthData?.transactions?.find(tr => tr.id === tId);
                         if (t && (t.amount === 0 || t.amount === null || t.amount === undefined)) {
                             if (totalDetails > 0) {
                                 const updatedT = { ...t, amount: totalDetails };
-                                handleTransactionBlur(updatedT);
+                                await handleTransactionBlur(updatedT);
                             }
                         }
                     }
@@ -1142,6 +1148,8 @@ const TransactionDetailModal = ({ isOpen, onClose, transactionId, transactionDes
     const [newDay, setNewDay] = useState('');
     const [newAmount, setNewAmount] = useState(0);
 
+    const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, detailId: null });
+    
     useEffect(() => {
         if (isOpen && transactionId) {
             fetchDetails();
@@ -1197,15 +1205,22 @@ const TransactionDetailModal = ({ isOpen, onClose, transactionId, transactionDes
         }
     };
 
-    const handleDeleteDetail = async (detailId) => {
-        if (!window.confirm("Deseja realmente excluir este detalhe?")) return;
-        
+    const handleDeleteDetail = (detailId) => {
+        setConfirmDelete({ isOpen: true, detailId });
+    };
+
+    const confirmDeleteDetail = async () => {
+        const detailId = confirmDelete.detailId;
+        if (!detailId) return;
+
         try {
             await api.delete(`/transaction-months/transactions/details/${detailId}`);
             setDetails(prev => prev.filter(d => d.id !== detailId));
         } catch (error) {
             console.error("Erro ao excluir detalhe:", error);
             alert("Erro ao excluir detalhe.");
+        } finally {
+            setConfirmDelete({ isOpen: false, detailId: null });
         }
     };
 
@@ -1314,6 +1329,16 @@ const TransactionDetailModal = ({ isOpen, onClose, transactionId, transactionDes
                     </>
                 )}
             </div>
+
+            <ConfirmationModal
+                isOpen={confirmDelete.isOpen}
+                onClose={() => setConfirmDelete({ isOpen: false, detailId: null })}
+                onConfirm={confirmDeleteDetail}
+                title="Confirmar Exclusão"
+                message="Deseja realmente excluir este detalhe?"
+                confirmText="Sim, Excluir"
+                cancelText="Cancelar"
+            />
         </div>
     );
 };

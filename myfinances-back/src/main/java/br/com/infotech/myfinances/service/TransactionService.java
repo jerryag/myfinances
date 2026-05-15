@@ -222,7 +222,7 @@ public class TransactionService {
         .status(t.getStatus())
         .remark(t.getRemark())
         .iconName(t.getIconName())
-        .hasDetails(t.getDetails() != null && !t.getDetails().isEmpty())
+        .hasDetails(transactionDetailRepository.existsByTransaction(t))
         .build();
   }
 
@@ -287,6 +287,7 @@ public class TransactionService {
     transactionDetailRepository.delete(detail);
   }
 
+  @Transactional(propagation = Propagation.REQUIRED)
   public List<TransactionDetailDto> getDetail(Long transactionId) {
     log.debug("Buscando detalhes da transação ID: {}", transactionId);
     ValidationUtils.notNull(transactionId, "ID da transação é obrigatório");
@@ -294,8 +295,21 @@ public class TransactionService {
     Transaction transaction = transactionRepository.findById(transactionId)
         .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada"));
 
-    return transactionDetailRepository.findByTransactionOrderByDetailDateAscAmountAscDescriptionAsc(transaction)
-        .stream()
+    List<TransactionDetail> details = transactionDetailRepository.findByTransactionOrderByDetailDateAscAmountAscDescriptionAsc(transaction);
+
+    // Regra: Se o valor do lançamento for zero e existirem detalhes, preenche com a soma
+    if ((transaction.getAmount() == null || transaction.getAmount().compareTo(BigDecimal.ZERO) == 0) && !details.isEmpty()) {
+      BigDecimal totalDetails = details.stream()
+          .map(TransactionDetail::getAmount)
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      if (totalDetails.compareTo(BigDecimal.ZERO) > 0) {
+        transaction.setAmount(totalDetails);
+        transactionRepository.save(transaction);
+      }
+    }
+
+    return details.stream()
         .map(this::toDetailDto)
         .toList();
   }

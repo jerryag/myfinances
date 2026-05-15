@@ -19,7 +19,7 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
     let realizedExpense = 0;
 
     const tableBody = [];
-    
+
     // Header Row
     tableBody.push([
         { text: 'Dia', style: 'tableHeader' },
@@ -33,12 +33,15 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
     transactions.forEach(t => {
         const typeDef = transactionTypes.find(type => type.id === t.transactionTypeId);
         const isIncome = typeDef?.type === 'INCOME';
+        const statusStr = t.status === 'COMPLETED' ? 'Realizado' : 'Pendente';
+        const amountColor = isIncome ? 'green' : 'red';
+        const iconColor = isIncome ? '#008000' : '#FF0000';
 
         const IconComponent = getIcon(typeDef?.iconName);
         let svgString = null;
         if (IconComponent) {
             svgString = renderToStaticMarkup(React.createElement(IconComponent));
-            svgString = svgString.replace(/currentColor/g, '#000000');
+            svgString = svgString.replace(/currentColor/g, iconColor);
         }
 
         // Planned (All filtered transactions)
@@ -50,9 +53,6 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
             if (isIncome) realizedIncome += t.amount || 0;
             else realizedExpense += t.amount || 0;
         }
-
-        const statusStr = t.status === 'COMPLETED' ? 'Realizado' : 'Pendente';
-        const amountColor = isIncome ? 'green' : 'red';
 
         // Main transaction row
         tableBody.push([
@@ -72,15 +72,6 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
 
         // Details rows
         if (t.details && t.details.length > 0) {
-            tableBody.push([
-                { text: '', style: 'detailText' }, // Dia empty
-                { text: '', style: 'detailText' }, // Tipo empty
-                { text: 'Detalhes do lançamento:', style: 'detailText', italics: true },
-                { text: '', style: 'detailText' }, // Valor empty
-                { text: '', style: 'detailText' }, // Status empty
-                { text: '', style: 'detailText' }  // Observação empty
-            ]);
-
             t.details.forEach(d => {
                 const dateObj = new Date(d.detailDate);
                 const dayStr = dateObj.getUTCDate().toString();
@@ -90,7 +81,7 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
                     {
                         columns: [
                             { text: dayStr, width: 15, alignment: 'right', style: 'detailText' },
-                            { text: `  ↳ ${d.description}`, width: '*', alignment: 'left', style: 'detailText' },
+                            { text: `${d.description}`, width: '*', alignment: 'left', style: 'detailText' },
                             { text: formatNumber(d.amount), width: 'auto', alignment: 'right', style: 'detailText' }
                         ],
                         columnGap: 5
@@ -108,7 +99,7 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
 
     const docDefinition = {
         pageOrientation: 'landscape',
-        footer: function(currentPage, pageCount) {
+        footer: function (currentPage, pageCount) {
             return {
                 text: `Página: ${currentPage} / ${pageCount}`,
                 alignment: 'right',
@@ -120,7 +111,7 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
         content: [
             { text: `Relatório de Lançamentos - ${month.toString().padStart(2, '0')}/${year}`, style: 'header' },
             { text: `Saldo Inicial (R$): ${formatNumber(initialBalance)}`, style: 'subheader', margin: [0, 0, 0, 10] },
-            
+
             {
                 table: {
                     headerRows: 1,
@@ -146,7 +137,7 @@ export const generateMonthlyReport = (reportData, transactionTypes) => {
                     paddingRight: function (i, node) { return 4; }
                 }
             },
-            
+
             { text: 'Resumo', style: 'header', margin: [0, 20, 0, 10] },
             {
                 table: {

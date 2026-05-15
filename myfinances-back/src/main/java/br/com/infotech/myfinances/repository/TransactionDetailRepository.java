@@ -10,5 +10,6 @@ import java.util.List;
 @Repository
 public interface TransactionDetailRepository extends JpaRepository<TransactionDetail, Long> {
   List<TransactionDetail> findByTransactionOrderByDetailDateAscAmountAscDescriptionAsc(Transaction transaction);
+  boolean existsByTransaction(Transaction transaction);
   void deleteByTransaction(Transaction transaction);
 }

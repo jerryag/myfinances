@@ -89,6 +89,7 @@ class TransactionServiceTest {
     mockTypeExpense = TransactionType.builder().id(200L).type(TransactionTypeType.EXPENSE).build();
 
     lenient().when(userService.getCurrentUser()).thenReturn(mockUser);
+    lenient().when(transactionDetailRepository.existsByTransaction(any())).thenReturn(false);
   }
 
   private TransactionDto createValidDto(Long typeId) {
@@ -445,5 +446,28 @@ class TransactionServiceTest {
     assertEquals(2, result.size());
     assertEquals(1L, result.get(0).getId());
     assertEquals(2L, result.get(1).getId());
+  }
+
+  // --- toDto ---
+  @Test
+  void testToDto_WithHasDetails() {
+    Transaction trans = Transaction.builder().id(50L).transactionDate(LocalDate.now()).transactionType(mockTypeIncome).build();
+    when(transactionDetailRepository.existsByTransaction(trans)).thenReturn(true);
+
+    TransactionDto result = transactionService.toDto(trans);
+
+    assertNotNull(result);
+    assertEquals(true, result.getHasDetails());
+  }
+
+  @Test
+  void testToDto_WithoutHasDetails() {
+    Transaction trans = Transaction.builder().id(50L).transactionDate(LocalDate.now()).transactionType(mockTypeIncome).build();
+    when(transactionDetailRepository.existsByTransaction(trans)).thenReturn(false);
+
+    TransactionDto result = transactionService.toDto(trans);
+
+    assertNotNull(result);
+    assertEquals(false, result.getHasDetails());
   }
 }
