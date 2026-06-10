@@ -457,6 +457,7 @@ export function MonthlyPlanning() {
                             value={monthData?.initialBalance || 0}
                             onSave={handleInitialBalanceSave}
                             textColor="white"
+                            allowNegative={true}
                         />
                     </div>
                 </div>
@@ -1010,7 +1011,7 @@ const formatDecimal = (value) => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const MoneyInput = ({ value, onSave, onFocus, textColor }) => {
+const MoneyInput = ({ value, onSave, onFocus, textColor, allowNegative = false }) => {
     // We maintain internal state to handle the shifting logic smoothly
     // and only trigger onSave (which calls API) on blur.
     const [internalValue, setInternalValue] = useState(0);
@@ -1024,8 +1025,10 @@ const MoneyInput = ({ value, onSave, onFocus, textColor }) => {
     }, [value]);
 
     const handleChange = (e) => {
+        const isNegative = allowNegative && e.target.value.includes('-');
         const raw = e.target.value.replace(/\D/g, '');
-        const val = raw ? parseFloat(raw) / 100 : 0;
+        let val = raw ? parseFloat(raw) / 100 : 0;
+        if (isNegative) val = -val;
         setInternalValue(val);
     };
 
